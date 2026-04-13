@@ -26,7 +26,6 @@ public record BotConfiguration(String discordToken, Optional<String> configuredC
     return new BotConfiguration(p.token, ch);
   }
 
-  /** For tests: parse secret string only (no env). */
   static BotConfiguration fromSecretOnly(String raw) {
     if (raw == null || raw.isBlank()) {
       throw new IllegalStateException("Empty secret");

@@ -5,17 +5,16 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public final class ChannelScope extends ListenerAdapter {
 
   private final BotConfiguration config;
-  private final List<BiConsumer<JDA, ChannelScope>> afterReady;
+  private final BiConsumer<JDA, ChannelScope> afterReady;
   private volatile long boundTextChannelId = -1;
 
-  public ChannelScope(BotConfiguration config, List<BiConsumer<JDA, ChannelScope>> afterReady) {
+  public ChannelScope(BotConfiguration config, BiConsumer<JDA, ChannelScope> afterReady) {
     this.config = config;
     this.afterReady = afterReady;
   }
@@ -38,18 +37,14 @@ public final class ChannelScope extends ListenerAdapter {
   @Override
   public void onReady(ReadyEvent event) {
     var jda = event.getJDA();
-    config
-        .configuredChannelName()
-        .ifPresent(
-            name -> {
-              var list = jda.getTextChannelsByName(name, true);
-              if (!list.isEmpty()) {
-                boundTextChannelId = list.get(0).getIdLong();
-              }
-            });
-    System.out.println("Ready: " + jda.getSelfUser().getName());
-    for (var h : afterReady) {
-      h.accept(jda, this);
+    var nameOpt = config.configuredChannelName();
+    if (nameOpt.isPresent()) {
+      var list = jda.getTextChannelsByName(nameOpt.get(), true);
+      if (!list.isEmpty()) {
+        boundTextChannelId = list.get(0).getIdLong();
+      }
     }
+    System.out.println("Ready: " + jda.getSelfUser().getName());
+    afterReady.accept(jda, this);
   }
 }
