@@ -23,5 +23,5 @@ fi
 export AWS_REGION="${AWS_REGION:-us-east-1}"
 export AWS_SECRET_NAME="${AWS_SECRET_NAME:-220_Discord_Token}"
 
-mvn -q -DskipTests package
+mvn -q package
 exec java -jar "$ROOT/target/discord-bot-1.0.0.jar"
