@@ -22,7 +22,7 @@ Until you run Maven, there is no single runnable artifact; after package, the JA
 | Path | What happens |
 |------|----------------|
 | **`bash scripts/local-deploy.sh`** | `cd` to repo root, optionally **`source local.env`** (export `AWS_PROFILE`, `AWS_REGION`, `AWS_SECRET_NAME`, channel env vars, etc.), then **`mvn -q package`** and **`exec java -jar target/discord-bot-1.0.0.jar`**. |
-| **`bash scripts/run-bot.sh`** | Same idea for a server (e.g. EC2): ensures Java 21 + Maven if missing, sets default **`AWS_REGION`** / **`AWS_SECRET_NAME`** if unset, packages, runs the same JAR. |
+| **`bash scripts/run-bot.sh`** | For servers (e.g. EC2): installs **Java 17** JDK + Maven if needed, sets **`JAVA_HOME`** to a JDK 17+ under `/usr/lib/jvm` so Maven’s compiler matches **`pom.xml`** (`--release 17`), then packages and runs the JAR. Also sets default **`AWS_REGION`** / **`AWS_SECRET_NAME`**. |
 | **Manual** | From repo root: `mvn -q package && java -jar target/discord-bot-1.0.0.jar` with AWS credentials available to the SDK (env, profile, instance role). |
 
 In all cases the **entry point** is **`BotBootstrap.main`**: the JVM loads the shaded JAR and starts that class.
