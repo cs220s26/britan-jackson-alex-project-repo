@@ -12,34 +12,26 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.function.BiConsumer;
 
-/** Loads config from AWS, binds the channel, loads {@link DiscordBotPlugin} implementations, starts JDA. */
 public final class BotBootstrap {
 
   public static void main(String[] args) throws InterruptedException {
-    var config = BotConfiguration.load();
-
+    var cfg = BotConfiguration.load();
     var plugins = new ArrayList<DiscordBotPlugin>();
     ServiceLoader.load(DiscordBotPlugin.class).forEach(plugins::add);
     if (plugins.isEmpty()) {
       plugins.add(new MinimalDeploymentPlugin());
     }
-
-    List<BiConsumer<JDA, ChannelScope>> afterReady = new ArrayList<>();
+    var afterReady = new ArrayList<BiConsumer<JDA, ChannelScope>>();
     for (var p : plugins) {
       afterReady.add(p::afterChannelScopeReady);
     }
-    var scope = new ChannelScope(config, afterReady);
-
+    var scope = new ChannelScope(cfg, afterReady);
     var intents = EnumSet.of(GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT);
     plugins.forEach(p -> intents.addAll(p.extraIntents()));
-
-    var builder =
-        JDABuilder.createDefault(config.discordToken()).enableIntents(intents).addEventListeners(scope);
-
-    for (var plugin : plugins) {
-      builder.addEventListeners(plugin.createListeners(scope, config).toArray());
+    var b = JDABuilder.createDefault(cfg.discordToken()).enableIntents(intents).addEventListeners(scope);
+    for (var p : plugins) {
+      b.addEventListeners(p.createListeners(scope, cfg).toArray());
     }
-
-    builder.build().awaitReady();
+    b.build().awaitReady();
   }
 }

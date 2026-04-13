@@ -13,16 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MinimalDeploymentPluginTest {
 
   @Test
-  void createListeners_returnsOneListener() {
-    var plugin = new MinimalDeploymentPlugin();
+  void oneListener() {
     var cfg = new BotConfiguration("t", Optional.empty());
     var scope = new ChannelScope(cfg, List.of());
-    var listeners = plugin.createListeners(scope, cfg);
-    assertEquals(1, listeners.size());
+    assertEquals(1, new MinimalDeploymentPlugin().createListeners(scope, cfg).size());
   }
 
   @Test
-  void extraIntents_emptyByDefault() {
+  void noExtraIntents() {
     assertTrue(new MinimalDeploymentPlugin().extraIntents().isEmpty());
   }
 }

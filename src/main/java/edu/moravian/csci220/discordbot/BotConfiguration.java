@@ -9,65 +9,45 @@ import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueReques
 
 import java.util.Optional;
 
-/** Token + optional channel name from AWS Secrets Manager and environment (merged). */
 public record BotConfiguration(String discordToken, Optional<String> configuredChannelName) {
 
   public static BotConfiguration load() {
-    var region = Optional.ofNullable(System.getenv("AWS_REGION")).orElse("us-east-1");
-    var secretName = Optional.ofNullable(System.getenv("AWS_SECRET_NAME")).orElse("220_Discord_Token");
-    var loaded = loadSecretFromAws(region, secretName);
-    var fromEnvName = channelNameFromEnv();
-    Optional<String> channelName = fromEnvName.isPresent() ? fromEnvName : loaded.channelName();
-    if (channelName.isEmpty()) {
-      System.err.println(
-          "Set CHANNEL_NAME or DISCORD_CHANNEL_NAME (env), or put CHANNEL_NAME / DISCORD_CHANNEL_NAME in the secret JSON.");
+    String region = Optional.ofNullable(System.getenv("AWS_REGION")).orElse("us-east-1");
+    String secretName = Optional.ofNullable(System.getenv("AWS_SECRET_NAME")).orElse("220_Discord_Token");
+    Parsed p = parseSecret(fetch(region, secretName));
+    Optional<String> ch =
+        Optional.ofNullable(System.getenv("DISCORD_CHANNEL_NAME")).filter(s -> !s.isBlank()).map(String::trim);
+    if (ch.isEmpty()) {
+      ch = Optional.ofNullable(System.getenv("CHANNEL_NAME")).filter(s -> !s.isBlank()).map(String::trim);
     }
-    return new BotConfiguration(loaded.token(), channelName);
+    if (ch.isEmpty()) {
+      ch = p.channelName;
+    }
+    return new BotConfiguration(p.token, ch);
   }
 
-  private record LoadedSecret(String token, Optional<String> channelName) {}
-
-  /** Parses a Secrets Manager payload (plain token or JSON) without reading environment. */
-  static BotConfiguration parseSecretWithoutEnvMerge(String raw) {
+  /** For tests: parse secret string only (no env). */
+  static BotConfiguration fromSecretOnly(String raw) {
     if (raw == null || raw.isBlank()) {
       throw new IllegalStateException("Empty secret");
     }
-    var loaded = parseSecretPayload(raw.trim());
-    return new BotConfiguration(loaded.token(), loaded.channelName());
+    Parsed p = parseSecret(raw.trim());
+    return new BotConfiguration(p.token, p.channelName);
   }
 
-  private static LoadedSecret parseSecretPayload(String s) {
-    if (!s.startsWith("{")) {
-      return new LoadedSecret(s, Optional.empty());
-    }
-    JsonObject json = JsonParser.parseString(s).getAsJsonObject();
-    String token = null;
-    for (var key : new String[] {"DISCORD_TOKEN", "discord_token", "DISCORD_BOT_TOKEN", "token"}) {
-      if (json.has(key) && json.get(key).isJsonPrimitive()) {
-        token = json.get(key).getAsString();
-        break;
-      }
-    }
-    if (token == null) {
-      throw new IllegalStateException("No token field in JSON. Keys: " + json.keySet());
-    }
-    return new LoadedSecret(token, channelNameFromJson(json));
-  }
+  private record Parsed(String token, Optional<String> channelName) {}
 
-  private static LoadedSecret loadSecretFromAws(String regionId, String secretName) {
-    try (var client =
+  private static String fetch(String region, String secretName) {
+    try (var c =
         SecretsManagerClient.builder()
-            .region(Region.of(regionId))
+            .region(Region.of(region))
             .credentialsProvider(DefaultCredentialsProvider.create())
             .build()) {
-      var raw =
-          client
-              .getSecretValue(GetSecretValueRequest.builder().secretId(secretName).build())
-              .secretString();
-      if (raw == null || raw.isBlank()) {
+      String s = c.getSecretValue(GetSecretValueRequest.builder().secretId(secretName).build()).secretString();
+      if (s == null || s.isBlank()) {
         throw new IllegalStateException("Empty secret: " + secretName);
       }
-      return parseSecretPayload(raw.trim());
+      return s.trim();
     } catch (Exception e) {
       if (e instanceof RuntimeException re) {
         throw re;
@@ -76,38 +56,31 @@ public record BotConfiguration(String discordToken, Optional<String> configuredC
     }
   }
 
-  private static Optional<String> channelNameFromEnv() {
-    return firstNonBlankEnv("DISCORD_CHANNEL_NAME", "CHANNEL_NAME")
-        .map(String::trim)
-        .filter(s -> !s.isEmpty());
-  }
-
-  private static Optional<String> firstNonBlankEnv(String a, String b) {
-    var x = System.getenv(a);
-    if (x != null && !x.isBlank()) {
-      return Optional.of(x);
+  private static Parsed parseSecret(String s) {
+    if (!s.startsWith("{")) {
+      return new Parsed(s, Optional.empty());
     }
-    x = System.getenv(b);
-    if (x != null && !x.isBlank()) {
-      return Optional.of(x);
-    }
-    return Optional.empty();
-  }
-
-  private static Optional<String> channelNameFromJson(JsonObject json) {
-    for (var key : new String[] {"DISCORD_CHANNEL_NAME", "CHANNEL_NAME", "channel_name", "channel"}) {
-      if (!json.has(key)) {
-        continue;
-      }
-      var el = json.get(key);
-      if (el.isJsonNull() || !el.isJsonPrimitive()) {
-        continue;
-      }
-      var n = el.getAsString().trim();
-      if (!n.isEmpty()) {
-        return Optional.of(n);
+    JsonObject j = JsonParser.parseString(s).getAsJsonObject();
+    String token = null;
+    for (var k : new String[] {"DISCORD_TOKEN", "discord_token", "token"}) {
+      if (j.has(k) && j.get(k).isJsonPrimitive()) {
+        token = j.get(k).getAsString();
+        break;
       }
     }
-    return Optional.empty();
+    if (token == null) {
+      throw new IllegalStateException("No token in JSON");
+    }
+    Optional<String> ch = Optional.empty();
+    for (var k : new String[] {"DISCORD_CHANNEL_NAME", "CHANNEL_NAME"}) {
+      if (j.has(k) && j.get(k).isJsonPrimitive()) {
+        String n = j.get(k).getAsString().trim();
+        if (!n.isEmpty()) {
+          ch = Optional.of(n);
+          break;
+        }
+      }
+    }
+    return new Parsed(token, ch);
   }
 }
