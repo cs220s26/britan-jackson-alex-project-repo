@@ -1,52 +1,35 @@
-# CSCI 220 — Discord bot
+# StudyBuddy Discord Bot
 
-Discord bot in Java ([JDA](https://github.com/DV8FromTheWorld/JDA)). The token comes from **AWS Secrets Manager**; optional **text channel name** limits commands to one channel. Put your behavior in **`BotHandlers`** (startup hook + message listener). **`BotBootstrap`** is the `main` entry point.
+Java Discord bot using [JDA](https://github.com/DV8FromTheWorld/JDA).
 
-**Requirements:** Java **17**, **Maven**, AWS credentials on the machine, and **Message Content Intent** enabled in the [Discord Developer Portal](https://discord.com/developers/applications).
+- **Commands / bot logic**: `edu.moravian.StudyBuddyCommandHandler`
+- **Entry point**: `edu.moravian.csci220.discordbot.BotBootstrap`
+- **Optional channel lock**: set a channel name so commands only run there
 
 ## Run
 
 ```bash
-cp local.env.example local.env   # optional: AWS_PROFILE, region, secret name, channel name
-bash scripts/local-deploy.sh       # laptop
-bash scripts/run-bot.sh            # server (e.g. EC2; installs JDK 17 + Maven if needed)
-# or:
-mvn package && java -jar target/discord-bot-1.0.0.jar
+cp local.env.example local.env   # optional
+bash scripts/local-deploy.sh      # laptop
+# or: bash scripts/run-bot.sh     # server (EC2)
+# or: mvn package && java -jar target/discord-bot-1.0.0.jar
 ```
 
-**Main class:** `edu.moravian.csci220.discordbot.BotBootstrap`  
-**Artifact:** `target/discord-bot-1.0.0.jar` (shaded)
+## Config
 
-## Configuration
-
-| Variable | Default | Role |
-|----------|---------|------|
-| `AWS_REGION` | `us-east-1` | Secrets Manager region |
-| `AWS_SECRET_NAME` | `220_Discord_Token` | Secret id |
-| `DISCORD_CHANNEL_NAME` or `CHANNEL_NAME` | — | Overrides channel name from the secret (env wins) |
-
-**Secret value:** plain text (= token only), or JSON with token key `DISCORD_TOKEN`, `discord_token`, or `token`, and optional channel keys `DISCORD_CHANNEL_NAME` or `CHANNEL_NAME`. If no channel name is set anywhere, the bot runs **unbound** (your listener should still check `ChannelScope` if you only want one channel).
-
-## Where to edit
-
-| Class | Role |
-|-------|------|
-| `BotHandlers` | `afterChannelScopeReady` — runs after `ChannelScope` finishes on **Ready** (good for a startup message). `listener` — return value is registered as a JDA listener (e.g. commands). |
-| `ChannelScope` | Resolves channel **name** → internal id; use `isBound()`, `isTargetChannel()`, `activeTextChannel(jda)` in handlers. |
-| `BotConfiguration` | Loaded once at startup from AWS + env. |
-| `BotBootstrap` | Wires config, `ChannelScope`, intents, and `BotHandlers` — change here if you need extra gateway intents. |
+- **AWS**: `AWS_REGION` (default `us-east-1`), `AWS_SECRET_NAME` (default `220_Discord_Token`)
+- **Channel name (optional)**: `DISCORD_CHANNEL_NAME` or `CHANNEL_NAME`
+- **Secret**: plain token string, or JSON with `DISCORD_TOKEN` / `discord_token` / `token`
 
 ## Flow
 
 ```mermaid
 flowchart TD
-  A[Secrets Manager + env] --> B[BotConfiguration.load]
-  B --> C[BotBootstrap.main]
-  C --> D[ChannelScope + BotHandlers.listener]
-  D --> E[JDA connect / Ready]
-  E --> F[ChannelScope: bind channel name if set]
-  F --> G[BotHandlers.afterChannelScopeReady]
-  G --> H[Events to listener]
+  A[AWS Secrets Manager + env] --> B[BotConfiguration]
+  B --> C[BotBootstrap]
+  C --> D[ChannelScope - optional channel name filter]
+  C --> E[StudyBuddyCommandHandler listener]
+  D --> E
 ```
 
 <<<<<<< HEAD
