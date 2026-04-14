@@ -21,3 +21,8 @@ The shaded JAR includes **`ServicesResourceTransformer`** so `ServiceLoader` wor
 **Local:** `bash scripts/local-deploy.sh`  
 **EC2:** `bash scripts/run-bot.sh`  
 **Manual:** `mvn -q -DskipTests package && java -jar target/discord-bot-1.0.0.jar`
+
+### CI Status
+
+![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo
+/actions/workflows/run_tests.yml/badge.svg)
