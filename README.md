@@ -27,7 +27,7 @@ bash scripts/local-deploy.sh      # laptop
 flowchart TD
   A[AWS Secrets Manager + env] --> B[BotConfiguration]
   B --> C[BotBootstrap]
-  C --> D[ChannelScope (optional channel name filter)]
+  C --> D[ChannelScope - optional channel name filter]
   C --> E[StudyBuddyCommandHandler listener]
   D --> E
 ```
