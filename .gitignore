@@ -1,6 +1,4 @@
 .DS_Store
 **/target/
 local.env
-
-# Local-only documentation (not pushed)
-PROJECT-NOTES.md
+.idea
