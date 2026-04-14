@@ -8,40 +8,74 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Tests secret parsing via {@link BotConfiguration#fromSecretOnly(String)} (no AWS). Your real app
+ * uses {@link BotConfiguration#load()} which also reads environment variables.
+ */
 class BotConfigurationSecretParsingTest {
 
   @Test
-  void plainTokenString_parsesAsTokenOnly() {
-    var c = BotConfiguration.parseSecretWithoutEnvMerge("my-bot-token");
-    assertEquals("my-bot-token", c.discordToken());
+  void plainTextSecretIsJustTheToken() {
+    BotConfiguration c = BotConfiguration.fromSecretOnly("my-token-here");
+    assertEquals("my-token-here", c.discordToken());
     assertTrue(c.configuredChannelName().isEmpty());
   }
 
   @Test
-  void jsonWithDiscordToken_andChannelName() {
-    var json = "{\"DISCORD_TOKEN\":\"t\",\"CHANNEL_NAME\":\"general\"}";
-    var c = BotConfiguration.parseSecretWithoutEnvMerge(json);
-    assertEquals("t", c.discordToken());
+  void plainTextIsTrimmed() {
+    BotConfiguration c = BotConfiguration.fromSecretOnly("  abc  ");
+    assertEquals("abc", c.discordToken());
+  }
+
+  @Test
+  void jsonCanUseDiscordTokenKey() {
+    String json = "{\"DISCORD_TOKEN\":\"hello\",\"CHANNEL_NAME\":\"general\"}";
+    BotConfiguration c = BotConfiguration.fromSecretOnly(json);
+    assertEquals("hello", c.discordToken());
     assertEquals(Optional.of("general"), c.configuredChannelName());
   }
 
   @Test
-  void jsonIgnoresLegacyChannelIdKeys() {
-    var json =
-        "{\"DISCORD_TOKEN\":\"t\",\"CHANNEL_ID\":\"987654321098765432\",\"CHANNEL_NAME\":\"general\"}";
-    var c = BotConfiguration.parseSecretWithoutEnvMerge(json);
-    assertEquals("t", c.discordToken());
-    assertEquals(Optional.of("general"), c.configuredChannelName());
+  void jsonCanUseLowercaseDiscordTokenKey() {
+    String json = "{\"discord_token\":\"lowercase-key\"}";
+    BotConfiguration c = BotConfiguration.fromSecretOnly(json);
+    assertEquals("lowercase-key", c.discordToken());
   }
 
   @Test
-  void jsonMissingToken_throws() {
-    var json = "{\"CHANNEL_NAME\":\"x\"}";
-    assertThrows(IllegalStateException.class, () -> BotConfiguration.parseSecretWithoutEnvMerge(json));
+  void jsonCanUseShortTokenKey() {
+    String json = "{\"token\":\"short\"}";
+    BotConfiguration c = BotConfiguration.fromSecretOnly(json);
+    assertEquals("short", c.discordToken());
   }
 
   @Test
-  void emptySecret_throws() {
-    assertThrows(IllegalStateException.class, () -> BotConfiguration.parseSecretWithoutEnvMerge("   "));
+  void jsonDiscordChannelNameWinsOverChannelName() {
+    String json =
+        "{\"DISCORD_TOKEN\":\"t\",\"DISCORD_CHANNEL_NAME\":\"first\",\"CHANNEL_NAME\":\"second\"}";
+    BotConfiguration c = BotConfiguration.fromSecretOnly(json);
+    assertEquals(Optional.of("first"), c.configuredChannelName());
+  }
+
+  @Test
+  void jsonWithOnlyChannelNameAndNoTokenThrows() {
+    assertThrows(
+        IllegalStateException.class,
+        () -> BotConfiguration.fromSecretOnly("{\"CHANNEL_NAME\":\"oops\"}"));
+  }
+
+  @Test
+  void jsonWithEmptyObjectThrows() {
+    assertThrows(IllegalStateException.class, () -> BotConfiguration.fromSecretOnly("{}"));
+  }
+
+  @Test
+  void blankSecretThrows() {
+    assertThrows(IllegalStateException.class, () -> BotConfiguration.fromSecretOnly("   "));
+  }
+
+  @Test
+  void nullSecretThrows() {
+    assertThrows(IllegalStateException.class, () -> BotConfiguration.fromSecretOnly(null));
   }
 }

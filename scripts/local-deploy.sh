@@ -14,5 +14,5 @@ if [[ -f "$ROOT/local.env" ]]; then
   set +a
 fi
 
-mvn -q -DskipTests package
+mvn -q package
 exec java -jar "$ROOT/target/discord-bot-1.0.0.jar"
