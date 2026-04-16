@@ -1,0 +1,16 @@
+[Unit]
+Description=Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/discord-bot
+Environment=AWS_REGION=us-east-1
+Environment=AWS_SECRET_NAME=220_Discord_Token
+ExecStart=/opt/discord-bot/scripts/run-bot.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
