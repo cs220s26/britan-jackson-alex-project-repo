@@ -9,10 +9,8 @@ Java Discord bot using [JDA](https://github.com/DV8FromTheWorld/JDA).
 ## Run
 
 ```bash
-cp local.env.example local.env   # optional
-bash scripts/local-deploy.sh      # laptop
-# or: bash scripts/run-bot.sh     # server (EC2)
-# or: mvn package && java -jar target/discord-bot-1.0.0.jar
+AWS_REGION=us-east-1 AWS_SECRET_NAME=220_Discord_Token mvn -q package && \
+java -jar target/discord-bot-1.0.0.jar
 ```
 
 ## Config
@@ -32,11 +30,8 @@ flowchart TD
   D --> E
 ```
 
-**Local:** `bash scripts/local-deploy.sh`  
-**EC2:** `bash scripts/run-bot.sh`  
-**Manual:** `mvn -q -DskipTests package && java -jar target/discord-bot-1.0.0.jar`
+**Local:** `AWS_REGION=... AWS_SECRET_NAME=... mvn -q package && java -jar target/discord-bot-1.0.0.jar`
 
 ### CI Status
 
-![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo
-/actions/workflows/run_tests.yml/badge.svg)
+[![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml/badge.svg)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
