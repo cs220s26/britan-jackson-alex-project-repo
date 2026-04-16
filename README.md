@@ -13,6 +13,32 @@ AWS_REGION=us-east-1 AWS_SECRET_NAME=220_Discord_Token mvn -q package && \
 java -jar target/discord-bot-1.0.0.jar
 ```
 
+## EC2 deployment (systemd)
+
+This repo includes:
+- `userdata.sh` (paste into EC2 **User data**)
+- `bot.service` (systemd unit the instance installs/enables)
+
+### Prereqs
+
+- **Amazon Linux** instance (uses `yum`)
+- **IAM role on the instance** that can read your Secrets Manager secret (e.g. `secretsmanager:GetSecretValue`)
+- Your secret exists in **the same region** as `AWS_REGION`
+
+### Steps
+
+1. Launch an EC2 instance and attach an IAM role with Secrets Manager read access.
+2. In **Advanced details → User data**, paste the contents of `userdata.sh`.
+3. (Optional) Edit `bot.service` in this repo before launching if you want different values:
+   - `AWS_REGION`
+   - `AWS_SECRET_NAME`
+4. After the instance boots, SSH in and check status/logs:
+
+```bash
+sudo systemctl status bot.service
+sudo journalctl -u bot.service --no-pager
+```
+
 ## Config
 
 - **AWS**: `AWS_REGION` (default `us-east-1`), `AWS_SECRET_NAME` (default `220_Discord_Token`)
