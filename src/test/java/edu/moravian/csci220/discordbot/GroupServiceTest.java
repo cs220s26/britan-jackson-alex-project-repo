@@ -1,0 +1,35 @@
+package edu.moravian;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class GroupServiceTest {
+
+    @Test
+    void testCreateGroup() throws JsonProcessingException {
+        FakeRedisRepository repo = new FakeRedisRepository();
+        GroupService service = new GroupService(repo);
+
+        Group g = service.createGroup("math");
+        assertNotNull(g);
+        assertEquals("math", g.getName());
+
+        Group g2 = service.createGroup("math");
+        assertSame(g, g2);
+    }
+
+    @Test
+    void testJoinGroup() throws JsonProcessingException {
+        FakeRedisRepository repo = new FakeRedisRepository();
+        GroupService service = new GroupService(repo);
+
+        service.joinGroup("science", "userA", "alex");
+
+        User u = repo.getUser("userA");
+        assertTrue(u.isMemberOf("science"));
+
+        Group g = repo.getGroup("science");
+        assertTrue(g.getMembers().contains("userA"));
+    }
+}
