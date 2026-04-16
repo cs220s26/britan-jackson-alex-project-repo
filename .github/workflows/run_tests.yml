@@ -1,0 +1,31 @@
+name: Java Maven Tests
+
+# Trigger the workflow on pushes or pull requests to the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Check out the repository code
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Set up the Java Development Kit (JDK)
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin' # Eclipse Temurin is a popular, open-source JDK distribution
+        cache: 'maven'          # Automatically caches your ~/.m2/repository to speed up subsequent runs
+
+    # 3. Run the Maven build and tests
+    - name: Run tests with Maven
+      # -B runs Maven in non-interactive (batch) mode, preventing log spam
+      # verify compiles, tests, and packages the code, ensuring integration tests run if present
+      run: mvn -B verify

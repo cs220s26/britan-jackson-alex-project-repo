@@ -7,11 +7,8 @@ Discord bot in Java ([JDA](https://github.com/DV8FromTheWorld/JDA)). The token c
 ## Run
 
 ```bash
-cp local.env.example local.env   # optional: AWS_PROFILE, region, secret name, channel name
-bash scripts/local-deploy.sh       # laptop
-bash scripts/run-bot.sh            # server (e.g. EC2; installs JDK 17 + Maven if needed)
-# or:
-mvn package && java -jar target/discord-bot-1.0.0.jar
+AWS_REGION=us-east-1 AWS_SECRET_NAME=220_Discord_Token mvn -q package && \
+java -jar target/discord-bot-1.0.0.jar
 ```
 
 **Main class:** `edu.moravian.csci220.discordbot.BotBootstrap`  
