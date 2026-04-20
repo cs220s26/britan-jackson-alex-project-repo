@@ -1,5 +1,7 @@
 # StudyBuddy — Discord bot (CSCI 220)
 
+[![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml/badge.svg)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
+
 **StudyBuddy** is a Java Discord bot built with **JDA** that helps students coordinate **study groups**, log **sessions**, and surface **XP / leaderboard** style feedback through prefix commands (`!help`, `!session`, `!group`, and friends). The project is structured so configuration is pulled from **AWS Secrets Manager** at startup, the app ships as a **single shaded JAR**, and production hosts can run it under **systemd** on **Amazon Linux** with **IAM role–based** access to secrets—no token baked into the repo.
 
 **Why it exists (course context):** the repo is meant to exercise the CSCI 220 DevOps story—**GitHub** for source control, **Maven** for build and tests, **AWS Secrets Manager** for the Discord token, **EC2 + user data + systemd** for deployment, and **GitHub Actions** for continuous integration on `main`.
