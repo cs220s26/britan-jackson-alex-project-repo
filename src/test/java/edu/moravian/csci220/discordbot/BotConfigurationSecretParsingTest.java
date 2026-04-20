@@ -9,8 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests secret parsing via {@link BotConfiguration#fromSecretOnly(String)} (no AWS). Your real app
- * uses {@link BotConfiguration#load()} which also reads environment variables.
+ * Tests secret parsing via {@link BotConfiguration#fromSecretOnly(String)} (no AWS). Production
+ * {@link BotConfiguration#load()} fetches the secret from AWS; channel name comes only from the
+ * secret value (JSON), not from the process environment.
  */
 class BotConfigurationSecretParsingTest {
 
