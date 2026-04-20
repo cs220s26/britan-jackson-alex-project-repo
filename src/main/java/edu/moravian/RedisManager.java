@@ -2,6 +2,8 @@ package edu.moravian;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
@@ -12,10 +14,14 @@ public class RedisManager implements RedisRepository {
     private static final String K_SESSION = "session:";
     private static final String K_ACTIVE = "activeSession:";
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
     private Jedis jedis;
 
     public RedisManager() {
+        mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         try {
             jedis = new Jedis("localhost", 6379);
             System.out.println("Redis connection successful: " + jedis.ping());
@@ -29,30 +35,22 @@ public class RedisManager implements RedisRepository {
         return jedis != null;
     }
 
-    // ======================================================================
-    //                               USER
-    // ======================================================================
-
     @Override
     public void saveUser(User user) throws JsonProcessingException {
-        if (!connected()) return;
+        if (!connected() || user == null) return;
         jedis.set(K_USER + user.getId(), mapper.writeValueAsString(user));
     }
 
     @Override
-    public User getUser(String id) throws JsonProcessingException {
+    public User getUser(String userId) throws JsonProcessingException {
         if (!connected()) return null;
-        String json = jedis.get(K_USER + id);
+        String json = jedis.get(K_USER + userId);
         return json == null ? null : mapper.readValue(json, User.class);
     }
 
-    // ======================================================================
-    //                               GROUP
-    // ======================================================================
-
     @Override
     public void saveGroup(Group group) throws JsonProcessingException {
-        if (!connected()) return;
+        if (!connected() || group == null) return;
         jedis.set(K_GROUP + group.getName(), mapper.writeValueAsString(group));
     }
 
@@ -63,13 +61,9 @@ public class RedisManager implements RedisRepository {
         return json == null ? null : mapper.readValue(json, Group.class);
     }
 
-    // ======================================================================
-    //                               SESSION
-    // ======================================================================
-
     @Override
     public void saveSession(StudySession session) throws JsonProcessingException {
-        if (!connected()) return;
+        if (!connected() || session == null) return;
         jedis.set(K_SESSION + session.getSessionId(), mapper.writeValueAsString(session));
     }
 
@@ -79,10 +73,6 @@ public class RedisManager implements RedisRepository {
         String json = jedis.get(K_SESSION + sessionId);
         return json == null ? null : mapper.readValue(json, StudySession.class);
     }
-
-    // ======================================================================
-    //                     ACTIVE SESSION PER USER
-    // ======================================================================
 
     @Override
     public void setActiveSession(String userId, String sessionId) {
@@ -100,5 +90,11 @@ public class RedisManager implements RedisRepository {
     public void clearActiveSession(String userId) {
         if (!connected()) return;
         jedis.del(K_ACTIVE + userId);
+    }
+
+    public void close() {
+        if (jedis != null) {
+            jedis.close();
+        }
     }
 }
