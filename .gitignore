@@ -1,3 +1,25 @@
+# OS
 .DS_Store
+Thumbs.db
+dump.rdb
+
+# Maven / Java
 **/target/
-.idea
+*.class
+*.log
+
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# Local env / secrets (never commit)
+.env
+.env.*
+*.local

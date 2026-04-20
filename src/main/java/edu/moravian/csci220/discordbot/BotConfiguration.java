@@ -15,15 +15,7 @@ public record BotConfiguration(String discordToken, Optional<String> configuredC
     String region = Optional.ofNullable(System.getenv("AWS_REGION")).orElse("us-east-1");
     String secretName = Optional.ofNullable(System.getenv("AWS_SECRET_NAME")).orElse("220_Discord_Token");
     Parsed p = parseSecret(fetch(region, secretName));
-    Optional<String> ch =
-        Optional.ofNullable(System.getenv("DISCORD_CHANNEL_NAME")).filter(s -> !s.isBlank()).map(String::trim);
-    if (ch.isEmpty()) {
-      ch = Optional.ofNullable(System.getenv("CHANNEL_NAME")).filter(s -> !s.isBlank()).map(String::trim);
-    }
-    if (ch.isEmpty()) {
-      ch = p.channelName;
-    }
-    return new BotConfiguration(p.token, ch);
+    return new BotConfiguration(p.token, p.channelName);
   }
 
   static BotConfiguration fromSecretOnly(String raw) {
