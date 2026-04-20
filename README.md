@@ -52,12 +52,25 @@ cd britan-jackson-alex-project-repo
 
 ### 2. Store the Discord token in Secrets Manager
 
-Create a secret named **`220_Discord_Token`** (or another name—if you change it, set `AWS_SECRET_NAME` on the host that runs the bot). Value can be:
+Create a secret named **`220_Discord_Token`** (or another name—if you change it, set `AWS_SECRET_NAME` on the host that runs the bot).
 
-- the token alone, or  
-- JSON with a token field: `DISCORD_TOKEN`, `discord_token`, or `token`, and optionally a text channel **name** via `DISCORD_CHANNEL_NAME` or `CHANNEL_NAME`.
+The **secret value** in AWS can be stored in either of two shapes. The bot decides which shape you used by looking at the **first non-whitespace character** of the string: if it is **`{`**, the value is treated as **JSON**; otherwise the **entire string** is treated as the Discord token.
 
-If no channel name is in the secret, the bot is **not** tied to a single channel.
+**Plain string (“token alone”)**
+
+- Paste **only** the bot token text you copied from the [Discord Developer Portal](https://discord.com/developers/applications) (Bot section → **Token**).  
+- No JSON, no quotes, no curly braces, no key names—just one line of characters, for example:  
+  `MTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxx`  
+- The whole secret body is used as `discordToken`. There is **no** channel name in this format, so the bot listens everywhere your handler allows (not locked to one channel by config).
+
+Use this when you only need the token in Secrets Manager and you are fine configuring an optional channel name later by switching to JSON or by changing the secret.
+
+**JSON object**
+
+- Use JSON when you want **both** the token **and** optional metadata in one secret.  
+- Include a token field using one of: **`DISCORD_TOKEN`**, **`discord_token`**, or **`token`**.  
+- Optionally add a Discord text channel **name** (not the numeric ID) with **`DISCORD_CHANNEL_NAME`** or **`CHANNEL_NAME`** so **`ChannelScope`** can restrict commands to that channel.  
+- If those channel keys are missing or empty, behavior matches “token alone” for channel binding: the bot is **not** tied to a single channel by name from the secret.
 
 ### 3. AWS CLI profile (e.g. Learner Lab)
 
