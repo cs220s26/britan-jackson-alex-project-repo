@@ -1,63 +1,131 @@
-# StudyBuddy Discord Bot
+# StudyBuddy — Discord bot (CSCI 220)
 
-Java Discord bot using [JDA](https://github.com/DV8FromTheWorld/JDA).
+**StudyBuddy** is a Java Discord bot built with **JDA** that helps students coordinate **study groups**, log **sessions**, and surface **XP / leaderboard** style feedback through prefix commands (`!help`, `!session`, `!group`, and friends). The project is structured so configuration is pulled from **AWS Secrets Manager** at startup, the app ships as a **single shaded JAR**, and production hosts can run it under **systemd** on **Amazon Linux** with **IAM role–based** access to secrets—no token baked into the repo.
 
-- **Commands / bot logic**: `edu.moravian.StudyBuddyCommandHandler`
-- **Entry point**: `edu.moravian.csci220.discordbot.BotBootstrap`
-- **Optional channel lock**: set a channel name so commands only run there
+**Why it exists (course context):** the repo is meant to exercise the CSCI 220 DevOps story—**GitHub** for source control, **Maven** for build and tests, **AWS Secrets Manager** for the Discord token, **EC2 + user data + systemd** for deployment, and **GitHub Actions** for continuous integration on `main`.
 
-## Run
+> **Architecture sketch (diagram TBD):** Discord clients → **JDA** on EC2 (`bot.service`) → **Secrets Manager** for credentials. **Data layer:** **Redis** (via **Jedis**) — **not implemented yet.**
+
+---
+
+## What you can do with the bot
+
+- **Groups:** `!group create|join|leave|info <name>` — scaffold messaging for group lifecycle.
+- **Sessions:** `!session start <subject>`, `!session end`, plus placeholders for `status` and `history`.
+- **Gamification:** `!xp`, `!xp rank <group>`, `!leaderboard <group>`.
+- **Basics:** `!ping`, `!about`, `!help`.
+
+Commands are handled in **`StudyBuddyCommandHandler`**. An optional **channel name** in the **Secrets Manager** value (JSON) ties the bot to a single text channel via **`ChannelScope`** so traffic stays in one place—there is no `.env` file and no Discord/channel settings read from the local machine’s environment.
+
+---
+
+## Stack
+
+| Layer | Choices |
+|--------|---------|
+| Runtime | Java **17** (Maven `release` 17); CI uses JDK **21** (Temurin) to run `mvn verify` |
+| Discord | **JDA 5**, intents: `GUILD_MESSAGES`, `MESSAGE_CONTENT` |
+| Config / secrets | **AWS SDK for Java v2** → Secrets Manager only (token + optional channel in JSON); **Gson** for parsing |
+| Data | **Redis** (Jedis) — chosen data layer; **not implemented yet** |
+| Build | **Maven** (shade plugin → `target/discord-bot-1.0.0.jar`) |
+| Tests | **JUnit 5** |
+| Server | **Amazon Linux** + **systemd** (`bot.service`), bootstrap via `userdata.sh` |
+| CI | **GitHub Actions** — `.github/workflows/run_tests.yml` |
+| Static analysis | **Checkstyle** — *to be implemented* (Maven plugin + `checkstyle:check`, wired into CI alongside tests) |
+
+CI currently runs **`mvn -B verify`** (compile, test, package). **Checkstyle** is not configured yet; adding it is planned so pushes to `main` enforce a shared style gate. Deployment to EC2 is **manual** (see below)—there is no separate “CD” workflow that SSHs from GitHub.
+
+---
+
+## Run (development machine)
+
+**You need:** Git, **Java 17**, **Maven 3.9+**, AWS credentials that can call `secretsmanager:GetSecretValue` for your secret, and a Discord application with **Message Content Intent** enabled.
+
+Configuration comes from **AWS Secrets Manager** and the **default AWS credential chain** (for example `~/.aws/credentials` in a Learner Lab session). The bot uses built-in defaults **`us-east-1`** for the region and **`220_Discord_Token`** for the secret id unless the **host** sets `AWS_REGION` / `AWS_SECRET_NAME` (for example **`Environment=`** lines in **`bot.service`** on EC2). Do not use a `.env` file or local exports for Discord or channel settings.
+
+### 1. Clone
 
 ```bash
-AWS_REGION=us-east-1 AWS_SECRET_NAME=220_Discord_Token mvn -q package && \
+git clone https://github.com/cs220s26/britan-jackson-alex-project-repo.git
+cd britan-jackson-alex-project-repo
+```
+
+### 2. Store the Discord token in Secrets Manager
+
+Create a secret named **`220_Discord_Token`** (or another name—if you change it, set `AWS_SECRET_NAME` on the host that runs the bot). Value can be:
+
+- the token alone, or  
+- JSON with a token field: `DISCORD_TOKEN`, `discord_token`, or `token`, and optionally a text channel **name** via `DISCORD_CHANNEL_NAME` or `CHANNEL_NAME`.
+
+If no channel name is in the secret, the bot is **not** tied to a single channel.
+
+### 3. AWS CLI profile (e.g. Learner Lab)
+
+Put temporary credentials in `~/.aws/credentials` under `[default]` so **DefaultCredentialsProvider** can resolve them.
+
+### 4. Build and run
+
+```bash
+mvn -q package
 java -jar target/discord-bot-1.0.0.jar
 ```
 
-## EC2 deployment (systemd)
+Ensure the secret exists in the **same region** as the default (`us-east-1`) or set `AWS_REGION` on the machine that runs the JVM (for example in **`bot.service`** on EC2).
 
-This repo includes:
-- `userdata.sh` (paste into EC2 **User data**)
-- `bot.service` (systemd unit the instance installs/enables)
+---
 
-### Prereqs
+## First-time production setup (EC2)
 
-- **Amazon Linux** instance (uses `yum`)
-- **IAM role on the instance** that can read your Secrets Manager secret (e.g. `secretsmanager:GetSecretValue`)
-- Your secret exists in **the same region** as `AWS_REGION`
+Rough path; the secret must live in the same AWS region as **`AWS_REGION`** in **`bot.service`** (default **`us-east-1`**).
 
-### Steps
-
-1. Launch an EC2 instance and attach an IAM role with Secrets Manager read access.
-2. In **Advanced details → User data**, paste the contents of `userdata.sh`.
-3. (Optional) Edit `bot.service` in this repo before launching if you want different values:
-   - `AWS_REGION`
-   - `AWS_SECRET_NAME`
-4. After the instance boots, SSH in and check status/logs:
+1. **Instance:** Amazon Linux 2023 (or compatible), security group allowing **SSH (22)** from your IP; attach an **IAM instance profile** that can read the secret (e.g. Learner Lab **`LabInstanceProfile`** / **`LabRole`** pattern).
+2. **User data:** paste **`userdata.sh`** from this repo into **Advanced details → User data**. It installs Git, **Corretto 17**, Maven, clones into **`/opt/discord-bot`**, runs **`mvn package`**, installs **`bot.service`**, and enables the service. (Redis is not part of this script yet—the data layer is not implemented.)
+3. **Edit `bot.service`** if your secret is in another region or uses another secret id—the **`Environment=`** lines set **`AWS_REGION`** and **`AWS_SECRET_NAME`** for the process (no `.env` on the instance).
+4. **Verify:**
 
 ```bash
 sudo systemctl status bot.service
-sudo journalctl -u bot.service --no-pager
+sudo journalctl -u bot.service -f --no-pager
 ```
 
-## Config
+The JAR path is **`/opt/discord-bot/target/discord-bot-1.0.0.jar`** as referenced in the unit file.
 
-- **AWS**: `AWS_REGION` (default `us-east-1`), `AWS_SECRET_NAME` (default `220_Discord_Token`)
-- **Channel name (optional)**: `DISCORD_CHANNEL_NAME` or `CHANNEL_NAME`
-- **Secret**: plain token string, or JSON with `DISCORD_TOKEN` / `discord_token` / `token`
+### Redeploying after changes
 
-## Flow
+On the server, use the included script (or equivalent): it pulls `main` and restarts the unit—see **`redeploy.sh`**.
 
-```mermaid
-flowchart TD
-  A[AWS Secrets Manager + env] --> B[BotConfiguration]
-  B --> C[BotBootstrap]
-  C --> D[ChannelScope - optional channel name filter]
-  C --> E[StudyBuddyCommandHandler listener]
-  D --> E
-```
+---
 
-**Local:** `AWS_REGION=... AWS_SECRET_NAME=... mvn -q package && java -jar target/discord-bot-1.0.0.jar`
+## Continuous integration (GitHub Actions)
 
-### CI Status
+Workflow: **`.github/workflows/run_tests.yml`**
+
+| Trigger | Behavior |
+|---------|----------|
+| Push to **`main`** | Checkout → JDK 21 (Temurin) → Maven cache → **`mvn -B verify`** |
+| Pull request into **`main`** | Same |
+
+No AWS secrets are required for CI—it only builds and tests in GitHub’s runner. **Checkstyle** will be added to this workflow (and `pom.xml`) when static analysis is implemented.
 
 [![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml/badge.svg)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
+
+---
+
+## Project map
+
+| Entry / wiring | `edu.moravian.csci220.discordbot.BotBootstrap` |
+|----------------|------------------------------------------------|
+| Config + secret parsing | `BotConfiguration` |
+| Optional single-channel filter | `ChannelScope` |
+| Listeners + startup hook | `BotHandlers` |
+| Command implementations | `StudyBuddyCommandHandler` |
+
+---
+
+## References (helpful while building)
+
+- [JDA wiki](https://github.com/DV8FromTheWorld/JDA/wiki) — intents and gateway setup  
+- [Discord Developer Portal](https://discord.com/developers/applications) — bot token and privileged intents  
+- [AWS Secrets Manager + Java SDK v2](https://docs.aws.amazon.com/secretsmanager/latest/userguide/secrets-manager-client.html)  
+- [systemd unit files](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)  
+- [GitHub Actions — workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
