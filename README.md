@@ -23,7 +23,7 @@ Commands are handled in **`StudyBuddyCommandHandler`**. An optional **channel na
 
 | Layer | Choices |
 |--------|---------|
-| Runtime | Java **17** (Maven `release` 17); CI uses JDK **21** (Temurin) to run `mvn verify` |
+| Runtime | Java **17** (Maven `release` 17); CI uses JDK **17** (Temurin) to run `mvn verify` |
 | Discord | **JDA 5**, intents: `GUILD_MESSAGES`, `MESSAGE_CONTENT` |
 | Config / secrets | **AWS SDK for Java v2** → Secrets Manager only (token + optional channel in JSON); **Gson** for parsing |
 | Data | **Redis** (Jedis) — chosen data layer; **not implemented yet** |
@@ -115,7 +115,7 @@ Workflow: **`.github/workflows/run_tests.yml`**
 
 | Trigger | Behavior |
 |---------|----------|
-| Push to **`main`** | Checkout → JDK 21 (Temurin) → Maven cache → **`mvn -B verify`** |
+| Push to **`main`** | Checkout → JDK 17 (Temurin) → Maven cache → **`mvn -B verify`** |
 | Pull request into **`main`** | Same |
 
 No AWS secrets are required for CI—it only builds and tests in GitHub’s runner. **Checkstyle** will be added to this workflow (and `pom.xml`) when static analysis is implemented.
