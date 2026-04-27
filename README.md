@@ -1,6 +1,6 @@
 # StudyBuddy — Discord bot (CSCI 220)
 
-[![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml/badge.svg?branch=main)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
+[![Testing](https://img.shields.io/github/actions/workflow/status/cs220s26/britan-jackson-alex-project-repo/run_tests.yml?branch=main&label=Testing)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
 
 **StudyBuddy** is a Java Discord bot built with **JDA** that helps students coordinate **study groups**, log **sessions**, and surface **XP / leaderboard** style feedback through prefix commands (`!help`, `!session`, `!group`, and friends). The project is structured so configuration is pulled from **AWS Secrets Manager** at startup, the app ships as a **single shaded JAR**, and production hosts can run it under **systemd** on **Amazon Linux** with **IAM role–based** access to secrets—no token baked into the repo.
 
@@ -122,7 +122,7 @@ Workflow: **`.github/workflows/run_tests.yml`**
 
 No AWS secrets are required for CI—it only builds and tests in GitHub’s runner. **Checkstyle** will be added to this workflow (and `pom.xml`) when static analysis is implemented.
 
-[![Testing](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml/badge.svg?branch=main)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
+**Runs:** [GitHub Actions tab](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
 
 ---
 
