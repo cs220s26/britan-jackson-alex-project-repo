@@ -33,7 +33,9 @@ public class Group {
 
     // Helpers (idempotent)
     public void addMember(String userId) {
-        if (!members.contains(userId)) members.add(userId);
+        if (!members.contains(userId)) {
+            members.add(userId);
+        }
     }
 
     public void addXP(String userId, int xp) {

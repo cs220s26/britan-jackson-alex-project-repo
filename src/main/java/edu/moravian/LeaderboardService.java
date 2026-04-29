@@ -2,7 +2,9 @@ package edu.moravian;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class LeaderboardService {
@@ -15,7 +17,9 @@ public class LeaderboardService {
 
     public String getLeaderboard(String groupName) throws JsonProcessingException {
         Group g = repo.getGroup(groupName);
-        if (g == null) return "No such group: " + groupName;
+        if (g == null) {
+            return "No such group: " + groupName;
+        }
 
         Map<String, Integer> board = g.getLeaderboard();
         if (board == null || board.isEmpty()) {

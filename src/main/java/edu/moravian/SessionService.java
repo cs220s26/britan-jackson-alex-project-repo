@@ -31,7 +31,9 @@ public class SessionService {
 
     public int endActiveSession(String userId) throws JsonProcessingException {
         String sessionId = repo.getActiveSession(userId);
-        if (sessionId == null) return 0;
+        if (sessionId == null) {
+            return 0;
+        }
 
         StudySession session = repo.getSession(sessionId);
         if (session == null) {
@@ -40,7 +42,9 @@ public class SessionService {
         }
 
         long minutes = Duration.between(session.getStartTime(), Instant.now()).toMinutes();
-        if (minutes < 0) minutes = 0;
+        if (minutes < 0) {
+            minutes = 0;
+        }
         session.setDuration(minutes);
         repo.saveSession(session);
         repo.clearActiveSession(userId);

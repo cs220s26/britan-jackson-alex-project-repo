@@ -12,7 +12,9 @@ public class GroupService {
 
     public Group createGroup(String name) throws JsonProcessingException {
         Group g = repo.getGroup(name);
-        if (g != null) return g; // already exists
+        if (g != null) {
+            return g; // already exists
+        }
         Group group = new Group(name);
         repo.saveGroup(group);
         return group;

@@ -42,8 +42,12 @@ public class User {
     }
 
     public void addGroup(String groupName) {
-        if (groupName == null || groupName.isEmpty()) return;
-        if (!groups.contains(groupName)) groups.add(groupName);
+        if (groupName == null || groupName.isEmpty()) {
+            return;
+        }
+        if (!groups.contains(groupName)) {
+            groups.add(groupName);
+        }
     }
 
     public boolean isMemberOf(String groupName) {

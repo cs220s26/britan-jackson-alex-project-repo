@@ -37,58 +37,76 @@ public class RedisManager implements RedisRepository {
 
     @Override
     public void saveUser(User user) throws JsonProcessingException {
-        if (!connected() || user == null) return;
+        if (!connected() || user == null) {
+            return;
+        }
         jedis.set(K_USER + user.getId(), mapper.writeValueAsString(user));
     }
 
     @Override
     public User getUser(String userId) throws JsonProcessingException {
-        if (!connected()) return null;
+        if (!connected()) {
+            return null;
+        }
         String json = jedis.get(K_USER + userId);
         return json == null ? null : mapper.readValue(json, User.class);
     }
 
     @Override
     public void saveGroup(Group group) throws JsonProcessingException {
-        if (!connected() || group == null) return;
+        if (!connected() || group == null) {
+            return;
+        }
         jedis.set(K_GROUP + group.getName(), mapper.writeValueAsString(group));
     }
 
     @Override
     public Group getGroup(String groupName) throws JsonProcessingException {
-        if (!connected()) return null;
+        if (!connected()) {
+            return null;
+        }
         String json = jedis.get(K_GROUP + groupName);
         return json == null ? null : mapper.readValue(json, Group.class);
     }
 
     @Override
     public void saveSession(StudySession session) throws JsonProcessingException {
-        if (!connected() || session == null) return;
+        if (!connected() || session == null) {
+            return;
+        }
         jedis.set(K_SESSION + session.getSessionId(), mapper.writeValueAsString(session));
     }
 
     @Override
     public StudySession getSession(String sessionId) throws JsonProcessingException {
-        if (!connected()) return null;
+        if (!connected()) {
+            return null;
+        }
         String json = jedis.get(K_SESSION + sessionId);
         return json == null ? null : mapper.readValue(json, StudySession.class);
     }
 
     @Override
     public void setActiveSession(String userId, String sessionId) {
-        if (!connected()) return;
+        if (!connected()) {
+            return;
+        }
         jedis.set(K_ACTIVE + userId, sessionId);
     }
 
     @Override
     public String getActiveSession(String userId) {
-        if (!connected()) return null;
+        if (!connected()) {
+            return null;
+        }
         return jedis.get(K_ACTIVE + userId);
     }
 
     @Override
     public void clearActiveSession(String userId) {
-        if (!connected()) return;
+        if (!connected()) {
+            return;
+        }
         jedis.del(K_ACTIVE + userId);
     }
 

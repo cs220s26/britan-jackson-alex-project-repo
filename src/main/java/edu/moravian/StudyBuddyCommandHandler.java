@@ -67,7 +67,10 @@ public class StudyBuddyCommandHandler extends ListenerAdapter {
                 break;
 
             case "!about":
-                event.getChannel().sendMessage("📚 Study Buddy Bot — track sessions, earn XP, have fun with friends, and get your study on!").queue();
+                event.getChannel()
+                    .sendMessage(
+                        "📚 Study Buddy Bot — track sessions, earn XP, have fun with friends, and get your study on!")
+                    .queue();
                 break;
             default:
                 // Ignore unknown commands
@@ -176,7 +179,9 @@ public class StudyBuddyCommandHandler extends ListenerAdapter {
                     ensureUserExists(event);
                     StudySession session = sessionService.startSession(authorId(event), subject);
                     if (session == null) {
-                        event.getChannel().sendMessage("⚠ You already have an active session. Use `!session end`.").queue();
+                        event.getChannel()
+                            .sendMessage("⚠ You already have an active session. Use `!session end`.")
+                            .queue();
                         break;
                     }
                     event.getChannel().sendMessage("📚 Session started for **" + subject + "**").queue();
