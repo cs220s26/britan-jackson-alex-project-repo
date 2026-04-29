@@ -6,7 +6,7 @@
 
 **Why it exists (course context):** the repo is meant to exercise the CSCI 220 DevOps story—**GitHub** for source control, **Maven** for build and tests, **AWS Secrets Manager** for the Discord token, **EC2 + user data + systemd** for deployment, and **GitHub Actions** for continuous integration on `main`.
 
-> **Architecture sketch (diagram TBD):** Discord clients → **JDA** on EC2 (`bot.service`) → **Secrets Manager** for credentials. **Data layer:** **Redis** (via **Jedis**) — **not implemented yet.**
+> **Architecture sketch (diagram TBD):** Discord clients → **JDA** on EC2 (`bot.service`) → **Secrets Manager** for credentials. **Data layer:** **Redis** (via **Jedis**).
 
 ---
 
@@ -28,14 +28,14 @@ Commands are handled in **`StudyBuddyCommandHandler`**. An optional **channel na
 | Runtime | Java **17** (Maven `release` 17); CI uses JDK **17** (Temurin) to run `mvn verify` |
 | Discord | **JDA 5**, intents: `GUILD_MESSAGES`, `MESSAGE_CONTENT` |
 | Config / secrets | **AWS SDK for Java v2** → Secrets Manager only (token + optional channel in JSON); **Gson** for parsing |
-| Data | **Redis** (Jedis) — chosen data layer; **not implemented yet** |
+| Data | **Redis** (Jedis) — `RedisManager` implements `RedisRepository` |
 | Build | **Maven** (shade plugin → `target/discord-bot-1.0.0.jar`) |
 | Tests | **JUnit 5** |
 | Server | **Amazon Linux** + **systemd** (`bot.service`), bootstrap via `scripts/userdata.sh` |
 | CI | **GitHub Actions** — `.github/workflows/run_tests.yml` |
-| Static analysis | **Checkstyle** — *to be implemented* (Maven plugin + `checkstyle:check`, wired into CI alongside tests) |
+| Static analysis | **Checkstyle** — runs during `mvn verify` using `config/checkstyle/checkstyle.xml` |
 
-CI currently runs **`mvn -B verify`** (compile, test, package). **Checkstyle** is not configured yet; adding it is planned so pushes to `main` enforce a shared style gate. Deployment to EC2 is **manual** (see below)—there is no separate “CD” workflow that SSHs from GitHub.
+CI runs **`mvn -B verify`** (compile, tests, package, and **Checkstyle**). Deployment to EC2 is **manual** (see below)—there is no separate “CD” workflow that SSHs from GitHub.
 
 ---
 
@@ -44,6 +44,23 @@ CI currently runs **`mvn -B verify`** (compile, test, package). **Checkstyle** i
 **You need:** Git, **Java 17**, **Maven 3.9+**, AWS credentials that can call `secretsmanager:GetSecretValue` for your secret, and a Discord application with **Message Content Intent** enabled.
 
 Configuration comes from **AWS Secrets Manager** and the **default AWS credential chain** (for example `~/.aws/credentials` in a Learner Lab session). The bot uses built-in defaults **`us-east-1`** for the region and **`220_Discord_Token`** for the secret id unless the **host** sets `AWS_REGION` / `AWS_SECRET_NAME` (for example **`Environment=`** lines in **`bot.service`** on EC2). Do not use a `.env` file or local exports for Discord or channel settings.
+
+### Local Redis (for XP + leaderboards)
+
+If you want XP/leaderboards to persist locally, you need Redis running on **`localhost:6379`**.
+
+On macOS (Homebrew):
+
+```bash
+brew services start redis
+redis-cli ping
+```
+
+Useful scripts (all under `scripts/`):
+
+- **Reset local Redis DB**: `./scripts/reset_redis.sh`
+- **Seed “new bot” data**: `./scripts/seed_new_bot_redis.sh`
+- **Seed “mid-life bot” data**: `./scripts/seed_mid_life_bot_redis.sh`
 
 ### 1. Clone
 
@@ -94,7 +111,7 @@ Ensure the secret exists in the **same region** as the default (`us-east-1`) or 
 Rough path; the secret must live in the same AWS region as **`AWS_REGION`** in **`bot.service`** (default **`us-east-1`**).
 
 1. **Instance:** Amazon Linux 2023 (or compatible), security group allowing **SSH (22)** from your IP; attach an **IAM instance profile** that can read the secret (e.g. Learner Lab **`LabInstanceProfile`** / **`LabRole`** pattern).
-2. **User data:** paste **`scripts/userdata.sh`** from this repo into **Advanced details → User data**. It installs Git, **Corretto 17**, Maven, clones into **`/opt/discord-bot`**, runs **`mvn package`**, installs **`bot.service`**, and enables the service. (Redis is not part of this script yet—the data layer is not implemented.)
+2. **User data:** paste **`scripts/userdata.sh`** from this repo into **Advanced details → User data**. It installs Git, **Corretto 17**, Maven, clones into **`/opt/discord-bot`**, runs **`mvn package`**, installs **`bot.service`**, and enables the service. (You still need Redis available separately if you want persistence on the server.)
 3. **Edit `bot.service`** if your secret is in another region or uses another secret id—the **`Environment=`** lines set **`AWS_REGION`** and **`AWS_SECRET_NAME`** for the process (no `.env` on the instance).
 4. **Verify:**
 
@@ -120,7 +137,7 @@ Workflow: **`.github/workflows/run_tests.yml`**
 | Push to **`main`** | Checkout → JDK 17 (Temurin) → Maven cache → **`mvn -B verify`** |
 | Pull request into **`main`** | Same |
 
-No AWS secrets are required for CI—it only builds and tests in GitHub’s runner. **Checkstyle** will be added to this workflow (and `pom.xml`) when static analysis is implemented.
+No AWS secrets are required for CI—it only builds and tests in GitHub’s runner. Because Checkstyle is wired into Maven’s `verify` phase, CI enforces it automatically.
 
 **Runs:** [GitHub Actions tab](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
 
