@@ -1,5 +1,7 @@
 package edu.moravian.csci220.discordbot;
 
+import edu.moravian.RedisManager;
+import edu.moravian.RedisRepository;
 import edu.moravian.StudyBuddyCommandHandler;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -14,7 +16,8 @@ public final class BotHandlers {
   }
 
   public static ListenerAdapter listener(ChannelScope scope) {
-    var handler = new StudyBuddyCommandHandler();
+    RedisRepository repo = new RedisManager();
+    var handler = new StudyBuddyCommandHandler(repo);
     return new ListenerAdapter() {
       @Override
       public void onMessageReceived(MessageReceivedEvent event) {

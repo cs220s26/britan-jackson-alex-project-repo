@@ -1,17 +1,28 @@
 package edu.moravian;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class StudyBuddyCommandHandler extends ListenerAdapter {
 
-    public StudyBuddyCommandHandler() {
+    private final RedisRepository repo;
+    private final GroupService groupService;
+    private final SessionService sessionService;
+    private final LeaderboardService leaderboardService;
 
+    public StudyBuddyCommandHandler(RedisRepository repo) {
+        this.repo = repo;
+        this.groupService = new GroupService(repo);
+        this.sessionService = new SessionService(repo);
+        this.leaderboardService = new LeaderboardService(repo);
     }
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
-        if (event.getAuthor().isBot()) return;
+        if (event.getAuthor().isBot()) {
+            return;
+        }
 
         String msg = event.getMessage().getContentRaw().trim();
         String[] parts = msg.split("\\s+");
@@ -58,7 +69,32 @@ public class StudyBuddyCommandHandler extends ListenerAdapter {
             case "!about":
                 event.getChannel().sendMessage("📚 Study Buddy Bot — track sessions, earn XP, have fun with friends, and get your study on!").queue();
                 break;
+            default:
+                // Ignore unknown commands
+                break;
         }
+    }
+
+    private String authorId(MessageReceivedEvent event) {
+        return event.getAuthor().getId();
+    }
+
+    private String authorName(MessageReceivedEvent event) {
+        return event.getAuthor().getName();
+    }
+
+    private void ensureUserExists(MessageReceivedEvent event) throws JsonProcessingException {
+        String userId = authorId(event);
+        String username = authorName(event);
+        User existing = repo.getUser(userId);
+        if (existing != null) {
+            if (!username.equals(existing.getUsername())) {
+                existing.setUsername(username);
+                repo.saveUser(existing);
+            }
+            return;
+        }
+        repo.saveUser(new User(userId, username));
     }
 
 
@@ -76,19 +112,40 @@ public class StudyBuddyCommandHandler extends ListenerAdapter {
 
         switch (action) {
             case "create":
-                event.getChannel().sendMessage("📘 Group created: **" + name + "**").queue();
+                try {
+                    groupService.createGroup(name);
+                    event.getChannel().sendMessage("📘 Group created: **" + name + "**").queue();
+                } catch (JsonProcessingException e) {
+                    event.getChannel().sendMessage("⚠ Couldn't create group right now.").queue();
+                }
                 break;
 
             case "join":
-                event.getChannel().sendMessage("👥 You joined group **" + name + "**").queue();
+                try {
+                    ensureUserExists(event);
+                    groupService.joinGroup(name, authorId(event), authorName(event));
+                    event.getChannel().sendMessage("👥 You joined group **" + name + "**").queue();
+                } catch (JsonProcessingException e) {
+                    event.getChannel().sendMessage("⚠ Couldn't join group right now.").queue();
+                }
                 break;
 
             case "leave":
-                event.getChannel().sendMessage("👋 You left group **" + name + "**").queue();
+                event.getChannel().sendMessage("👋 Leave group is not implemented yet.").queue();
                 break;
 
             case "info":
-                event.getChannel().sendMessage("ℹ Info for group **" + name + "**").queue();
+                try {
+                    Group g = repo.getGroup(name);
+                    if (g == null) {
+                        event.getChannel().sendMessage("⚠ No such group: **" + name + "**").queue();
+                        break;
+                    }
+                    int members = g.getMembers() == null ? 0 : g.getMembers().size();
+                    event.getChannel().sendMessage("ℹ **" + name + "** has **" + members + "** member(s).").queue();
+                } catch (JsonProcessingException e) {
+                    event.getChannel().sendMessage("⚠ Couldn't load group info right now.").queue();
+                }
                 break;
 
             default:
@@ -115,11 +172,30 @@ public class StudyBuddyCommandHandler extends ListenerAdapter {
                     return;
                 }
                 String subject = parts[2];
-                event.getChannel().sendMessage("📚 Session started for **" + subject + "**").queue();
+                try {
+                    ensureUserExists(event);
+                    StudySession session = sessionService.startSession(authorId(event), subject);
+                    if (session == null) {
+                        event.getChannel().sendMessage("⚠ You already have an active session. Use `!session end`.").queue();
+                        break;
+                    }
+                    event.getChannel().sendMessage("📚 Session started for **" + subject + "**").queue();
+                } catch (JsonProcessingException e) {
+                    event.getChannel().sendMessage("⚠ Couldn't start a session right now.").queue();
+                }
                 break;
 
             case "end":
-                event.getChannel().sendMessage("✅ Session ended! XP awarded.").queue();
+                try {
+                    int xp = sessionService.endActiveSession(authorId(event));
+                    if (xp == 0) {
+                        event.getChannel().sendMessage("⚠ No active session to end.").queue();
+                        break;
+                    }
+                    event.getChannel().sendMessage("✅ Session ended! You earned **" + xp + "** XP.").queue();
+                } catch (JsonProcessingException e) {
+                    event.getChannel().sendMessage("⚠ Couldn't end your session right now.").queue();
+                }
                 break;
 
             case "status":
@@ -146,7 +222,12 @@ public class StudyBuddyCommandHandler extends ListenerAdapter {
         }
 
         String group = parts[1];
-        event.getChannel().sendMessage("🏆 Leaderboard for **" + group + "**").queue();
+        try {
+            String text = leaderboardService.getLeaderboard(group);
+            event.getChannel().sendMessage(text).queue();
+        } catch (JsonProcessingException e) {
+            event.getChannel().sendMessage("⚠ Couldn't load the leaderboard right now.").queue();
+        }
     }
 
     /* ===========================================================
