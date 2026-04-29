@@ -31,7 +31,7 @@ Commands are handled in **`StudyBuddyCommandHandler`**. An optional **channel na
 | Data | **Redis** (Jedis) — chosen data layer; **not implemented yet** |
 | Build | **Maven** (shade plugin → `target/discord-bot-1.0.0.jar`) |
 | Tests | **JUnit 5** |
-| Server | **Amazon Linux** + **systemd** (`bot.service`), bootstrap via `userdata.sh` |
+| Server | **Amazon Linux** + **systemd** (`bot.service`), bootstrap via `scripts/userdata.sh` |
 | CI | **GitHub Actions** — `.github/workflows/run_tests.yml` |
 | Static analysis | **Checkstyle** — *to be implemented* (Maven plugin + `checkstyle:check`, wired into CI alongside tests) |
 
@@ -94,7 +94,7 @@ Ensure the secret exists in the **same region** as the default (`us-east-1`) or 
 Rough path; the secret must live in the same AWS region as **`AWS_REGION`** in **`bot.service`** (default **`us-east-1`**).
 
 1. **Instance:** Amazon Linux 2023 (or compatible), security group allowing **SSH (22)** from your IP; attach an **IAM instance profile** that can read the secret (e.g. Learner Lab **`LabInstanceProfile`** / **`LabRole`** pattern).
-2. **User data:** paste **`userdata.sh`** from this repo into **Advanced details → User data**. It installs Git, **Corretto 17**, Maven, clones into **`/opt/discord-bot`**, runs **`mvn package`**, installs **`bot.service`**, and enables the service. (Redis is not part of this script yet—the data layer is not implemented.)
+2. **User data:** paste **`scripts/userdata.sh`** from this repo into **Advanced details → User data**. It installs Git, **Corretto 17**, Maven, clones into **`/opt/discord-bot`**, runs **`mvn package`**, installs **`bot.service`**, and enables the service. (Redis is not part of this script yet—the data layer is not implemented.)
 3. **Edit `bot.service`** if your secret is in another region or uses another secret id—the **`Environment=`** lines set **`AWS_REGION`** and **`AWS_SECRET_NAME`** for the process (no `.env` on the instance).
 4. **Verify:**
 
@@ -107,7 +107,7 @@ The JAR path is **`/opt/discord-bot/target/discord-bot-1.0.0.jar`** as reference
 
 ### Redeploying after changes
 
-On the server, use the included script (or equivalent): it pulls `main` and restarts the unit—see **`redeploy.sh`**.
+On the server, use the included script (or equivalent): it pulls `main` and restarts the unit—see **`scripts/redeploy.sh`**.
 
 ---
 
