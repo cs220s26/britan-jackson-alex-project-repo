@@ -1,4 +1,4 @@
-name: Java Maven Tests
+name: Java Maven CI (tests + checkstyle)
 
 # Trigger the workflow on pushes or pull requests to the main branch
 on:
@@ -25,7 +25,7 @@ jobs:
         cache: 'maven'          # Automatically caches your ~/.m2/repository to speed up subsequent runs
 
     # 3. Run the Maven build and tests
-    - name: Run tests with Maven
+    - name: Run Maven verify (includes Checkstyle)
       # -B runs Maven in non-interactive (batch) mode, preventing log spam
       # verify compiles, tests, and packages the code, ensuring integration tests run if present
       run: mvn -B verify
