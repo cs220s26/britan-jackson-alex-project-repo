@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# EC2 user-data for "containers + systemd" deployment (Amazon Linux 2023).
-# Uses Podman because Docker packages may be unavailable in vockey/Learner Lab repos.
-# - installs Podman + podman-compose
+# EC2 user-data for "Docker + systemd" deployment.
+# NOTE: In some vockey/Learner Lab setups, Amazon Linux 2023 repos do NOT include
+# Docker or Podman packages. If you see "No match for argument: podman/docker",
+# use an Ubuntu AMI instead.
+# - installs Docker Engine + Docker Compose plugin
 # - clones the repo into /opt/discord-bot
 # - installs and enables bot.service (which runs Compose in the foreground)
 #
@@ -13,16 +15,22 @@ set -euo pipefail
 REPO_URL="https://github.com/cs220s26/britan-jackson-alex-project-repo.git"
 APP_DIR="/opt/discord-bot"
 
-# Amazon Linux 2023 uses dnf (yum is a compatibility wrapper).
-dnf -y update
-dnf -y install git podman python3-pip
+source /etc/os-release
 
-# Podman Compose (pip) so we can run docker-compose.yml under systemd
-python3 -m pip install --upgrade pip
-python3 -m pip install podman-compose
+if [[ "${ID:-}" != "ubuntu" ]]; then
+  echo "ERROR: This user-data script expects an Ubuntu AMI (ID=ubuntu)."
+  echo "You are running: ${PRETTY_NAME:-unknown}"
+  echo "In vockey, Ubuntu AMIs reliably support Docker installs via apt."
+  exit 1
+fi
 
-# Make sure the systemd unit can find it at a stable path
-ln -sf "$(command -v podman-compose)" /usr/local/bin/podman-compose
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y git ca-certificates curl
+
+# Docker Engine + Compose plugin from Ubuntu repos (simple + reliable in labs)
+apt-get install -y docker.io docker-compose-plugin
+systemctl enable --now docker
 
 if [[ ! -d "$APP_DIR/.git" ]]; then
   rm -rf "$APP_DIR"

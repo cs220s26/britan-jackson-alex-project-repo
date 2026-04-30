@@ -1,6 +1,7 @@
 [Unit]
-Description=Discord Bot (Podman Compose)
-After=network-online.target
+Description=Discord Bot (Docker Compose)
+Requires=docker.service
+After=docker.service network-online.target
 Wants=network-online.target
 
 [Service]
@@ -10,9 +11,9 @@ WorkingDirectory=/opt/discord-bot
 Environment=AWS_REGION=us-east-1
 Environment=AWS_SECRET_NAME=220_Discord_Token
 
-ExecStartPre=/usr/local/bin/podman-compose build
-ExecStart=/usr/local/bin/podman-compose up
-ExecStop=/usr/local/bin/podman-compose down
+ExecStartPre=/usr/bin/docker compose build
+ExecStart=/usr/bin/docker compose up
+ExecStop=/usr/bin/docker compose down
 
 Restart=always
 RestartSec=5

@@ -29,7 +29,7 @@ Optional: put `CHANNEL_NAME` in the secret JSON to restrict commands to one chan
 | Data | **Redis** (Jedis) — `RedisManager` implements `RedisRepository` |
 | Build | **Maven** (shade plugin → `target/discord-bot-1.0.0.jar`) |
 | Tests | **JUnit 5** |
-| Server | **Amazon Linux** + **systemd** (`bot.service`) + **Docker Compose**, bootstrap via `scripts/userdata.sh` |
+| Server | **Ubuntu on EC2** + **systemd** (`bot.service`) + **Docker Compose**, bootstrap via `scripts/userdata.sh` |
 | CI | **GitHub Actions** — `.github/workflows/run_tests.yml` |
 | Static analysis | **Checkstyle** — runs during `mvn verify` using `config/checkstyle/checkstyle.xml` |
 
@@ -47,7 +47,7 @@ Straight-to-the-point (in **vockey / Learner Lab AWS console**):
 - **2. Download your SSH key**
   - Download/save your Learner Lab key file (for example **`labuser.pem`**)
 - **3. Launch EC2**
-  - AMI: Amazon Linux 2023
+  - AMI: **Ubuntu** (recommended in vockey; AL2023 container packages may be missing)
   - Security group: allow **SSH (22)** from your IP
   - IAM: attach an **instance profile** that can read the secret
 - **4. Paste user data**
