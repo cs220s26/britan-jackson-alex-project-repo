@@ -1,54 +1,58 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# EC2 user-data for "Docker + systemd" deployment.
-# NOTE: In some vockey/Learner Lab setups, Amazon Linux 2023 repos do NOT include
-# Docker or Podman packages. If you see "No match for argument: podman/docker",
-# use an Ubuntu AMI instead.
-# - installs Docker Engine + Docker Compose plugin
-# - clones the repo into /opt/discord-bot
-# - installs and enables bot.service (which runs Compose in the foreground)
-#
-# The bot reads its Discord token from AWS Secrets Manager.
-# Best practice is to attach an IAM instance profile that can read the secret.
+# EC2 user-data for "Docker + systemd" deployment (Ubuntu AMI).
+# - installs Docker Engine
+# - installs Docker Compose (docker CLI plugin) if missing
+# - clones/pulls repo into /opt/discord-bot
+# - installs + enables bot.service (runs docker compose in foreground)
 
 REPO_URL="https://github.com/cs220s26/britan-jackson-alex-project-repo.git"
 APP_DIR="/opt/discord-bot"
+SERVICE_PATH="/etc/systemd/system/bot.service"
+COMPOSE_PLUGIN_DIR="/usr/local/lib/docker/cli-plugins"
 
-source /etc/os-release
+log() { echo "[userdata] $*"; }
 
+source /etc/os-release || true
 if [[ "${ID:-}" != "ubuntu" ]]; then
-  echo "ERROR: This user-data script expects an Ubuntu AMI (ID=ubuntu)."
-  echo "You are running: ${PRETTY_NAME:-unknown}"
-  echo "In vockey, Ubuntu AMIs reliably support Docker installs via apt."
+  log "ERROR: expected Ubuntu AMI (ID=ubuntu), got: ${PRETTY_NAME:-unknown}"
   exit 1
 fi
 
 export DEBIAN_FRONTEND=noninteractive
+log "Installing prerequisites"
 apt-get update -y
 apt-get install -y git ca-certificates curl
 
-# Docker Engine from Ubuntu repos
+log "Installing Docker Engine"
 apt-get install -y docker.io
 systemctl enable --now docker
 
-# Install Docker Compose (as a Docker CLI plugin). Some Ubuntu images in vockey
-# don't provide docker-compose-plugin in apt.
-mkdir -p /usr/local/lib/docker/cli-plugins
+log "Ensuring Docker Compose is available"
+mkdir -p "$COMPOSE_PLUGIN_DIR"
 if ! docker compose version >/dev/null 2>&1; then
   arch="$(uname -m)"
-  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${arch}" \
-    -o /usr/local/lib/docker/cli-plugins/docker-compose
-  chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${arch}" -o "$COMPOSE_PLUGIN_DIR/docker-compose"
+  chmod +x "$COMPOSE_PLUGIN_DIR/docker-compose"
 fi
 
-if [[ ! -d "$APP_DIR/.git" ]]; then
+log "Cloning/updating repo in $APP_DIR"
+if [[ -d "$APP_DIR/.git" ]]; then
+  git -C "$APP_DIR" fetch --prune origin
+  git -C "$APP_DIR" checkout main
+  git -C "$APP_DIR" pull --ff-only origin main
+else
   rm -rf "$APP_DIR"
-  git clone "$REPO_URL" "$APP_DIR"
+  git clone --branch main "$REPO_URL" "$APP_DIR"
 fi
 
 cd "$APP_DIR"
 
-cp "$APP_DIR/bot.service" /etc/systemd/system/bot.service
+log "Installing systemd unit"
+cp "$APP_DIR/bot.service" "$SERVICE_PATH"
 systemctl daemon-reload
 systemctl enable --now bot.service
+
+log "Done. Service status:"
+systemctl --no-pager --full status bot.service || true

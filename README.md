@@ -4,8 +4,6 @@
 
 **StudyBuddy** is a Java (**JDA**) Discord bot for study groups, sessions, and XP/leaderboards.
 
-> Discord → **StudyBuddy (Docker on EC2 via `bot.service`)** → **AWS Secrets Manager** (token) + **Redis**
-
 ---
 
 ## What you can do with the bot
@@ -47,7 +45,7 @@ Straight-to-the-point (in **vockey / Learner Lab AWS console**):
 - **2. Download your SSH key**
   - Download/save your Learner Lab key file (for example **`labuser.pem`**)
 - **3. Launch EC2**
-  - AMI: **Ubuntu** (recommended in vockey; AL2023 container packages may be missing)
+  - AMI: **Ubuntu**
   - Security group: allow **SSH (22)** from your IP
   - IAM: attach an **instance profile** that can read the secret
 - **4. Paste user data**
@@ -87,6 +85,10 @@ cd britan-jackson-alex-project-repo
 ```bash
 docker compose --profile bot up --build
 ```
+
+Notes:
+
+- **Local creds into container**: `docker-compose.yml` mounts `${HOME}/.aws` read-only so the bot can read Secrets Manager.
 
 To stop:
 

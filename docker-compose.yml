@@ -23,6 +23,10 @@ services:
       REDIS_PORT: "6379"
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SECRET_NAME: ${AWS_SECRET_NAME:-220_Discord_Token}
+    volumes:
+      # Local dev: provides ~/.aws credentials to container.
+      # On EC2, this is usually empty; the bot will use the instance role instead.
+      - ${HOME}/.aws:/home/app/.aws:ro
 
 volumes:
   redis-data:
