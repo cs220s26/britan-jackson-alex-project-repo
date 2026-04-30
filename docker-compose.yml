@@ -13,7 +13,6 @@ services:
       retries: 20
 
   bot:
-    profiles: ["bot"]
     build:
       context: .
     depends_on:
@@ -24,8 +23,6 @@ services:
       REDIS_PORT: "6379"
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SECRET_NAME: ${AWS_SECRET_NAME:-220_Discord_Token}
-    volumes:
-      - ~/.aws:/home/app/.aws:ro
 
 volumes:
   redis-data:

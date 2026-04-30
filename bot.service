@@ -1,24 +1,18 @@
 [Unit]
-Description=Discord Bot (Docker Compose)
-Requires=docker.service
-After=docker.service network-online.target
+Description=Discord Bot (Podman Compose)
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/discord-bot
 
-# Allow overriding without editing the unit:
-# - create /etc/default/bot with AWS_REGION / AWS_SECRET_NAME
-EnvironmentFile=-/etc/default/bot
 Environment=AWS_REGION=us-east-1
 Environment=AWS_SECRET_NAME=220_Discord_Token
 
-# Compose v2 plugin lives at /usr/bin/docker compose (not docker-compose)
-ExecStartPre=/usr/bin/docker compose --profile bot pull --ignore-pull-failures
-ExecStartPre=/usr/bin/docker compose --profile bot build
-ExecStart=/usr/bin/docker compose --profile bot up
-ExecStop=/usr/bin/docker compose --profile bot down
+ExecStartPre=/usr/local/bin/podman-compose build
+ExecStart=/usr/local/bin/podman-compose up
+ExecStop=/usr/local/bin/podman-compose down
 
 Restart=always
 RestartSec=5

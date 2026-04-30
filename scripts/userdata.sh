@@ -12,19 +12,16 @@ set -euo pipefail
 REPO_URL="https://github.com/cs220s26/britan-jackson-alex-project-repo.git"
 APP_DIR="/opt/discord-bot"
 
-yum -y update
-yum -y install git docker curl
+# Amazon Linux 2023 uses dnf (yum is a compatibility wrapper).
+dnf -y update
+dnf -y install git curl podman python3-pip
 
-systemctl enable --now docker
+# Podman Compose (pip) so we can run docker-compose.yml under systemd
+python3 -m pip install --upgrade pip
+python3 -m pip install podman-compose
 
-# Install Docker Compose (as a Docker CLI plugin) in a way that works on AL2023
-# even when the docker-compose-plugin RPM isn't available.
-mkdir -p /usr/local/lib/docker/cli-plugins
-if ! /usr/bin/docker compose version >/dev/null 2>&1; then
-  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
-    -o /usr/local/lib/docker/cli-plugins/docker-compose
-  chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-fi
+# Make sure the systemd unit can find it at a stable path
+ln -sf "$(command -v podman-compose)" /usr/local/bin/podman-compose
 
 if [[ ! -d "$APP_DIR/.git" ]]; then
   rm -rf "$APP_DIR"
