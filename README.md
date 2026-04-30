@@ -2,22 +2,20 @@
 
 [![Testing](https://img.shields.io/github/actions/workflow/status/cs220s26/britan-jackson-alex-project-repo/run_tests.yml?branch=main&label=Testing)](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
 
-**StudyBuddy** is a Java Discord bot built with **JDA** that helps students coordinate **study groups**, log **sessions**, and surface **XP / leaderboard** style feedback through prefix commands (`!help`, `!session`, `!group`, and friends). The project is structured so configuration is pulled from **AWS Secrets Manager** at startup, the app ships as a **single shaded JAR**, and production hosts can run it under **systemd** on **Amazon Linux** with **IAM role–based** access to secrets—no token baked into the repo.
+**StudyBuddy** is a Java (**JDA**) Discord bot for study groups, sessions, and XP/leaderboards.
 
-**Why it exists (course context):** the repo is meant to exercise the CSCI 220 DevOps story—**GitHub** for source control, **Maven** for build and tests, **AWS Secrets Manager** for the Discord token, **EC2 + user data + systemd** for deployment, and **GitHub Actions** for continuous integration on `main`.
-
-> **Architecture sketch (diagram TBD):** Discord clients → **JDA** on EC2 (`bot.service`) → **Secrets Manager** for credentials. **Data layer:** **Redis** (via **Jedis**).
+> Discord → **StudyBuddy (Docker on EC2 via `bot.service`)** → **AWS Secrets Manager** (token) + **Redis**
 
 ---
 
 ## What you can do with the bot
 
-- **Groups:** `!group create|join|leave|info <name>` — scaffold messaging for group lifecycle.
-- **Sessions:** `!session start <subject>`, `!session end`, plus placeholders for `status` and `history`.
-- **Gamification:** `!xp`, `!xp rank <group>`, `!leaderboard <group>`.
-- **Basics:** `!ping`, `!about`, `!help`.
+- **Groups**: `!group create|join|leave|info <name>`
+- **Sessions**: `!session start <subject>` / `!session end`
+- **XP/leaderboards**: `!xp`, `!xp rank <group>`, `!leaderboard <group>`
+- **Basic**: `!ping`, `!about`, `!help`
 
-Commands are handled in **`StudyBuddyCommandHandler`**. An optional **channel name** in the **Secrets Manager** value (JSON) ties the bot to a single text channel via **`ChannelScope`** so traffic stays in one place—there is no `.env` file and no Discord/channel settings read from the local machine’s environment.
+Optional: put `CHANNEL_NAME` in the secret JSON to restrict commands to one channel (`ChannelScope`).
 
 ---
 
@@ -31,7 +29,7 @@ Commands are handled in **`StudyBuddyCommandHandler`**. An optional **channel na
 | Data | **Redis** (Jedis) — `RedisManager` implements `RedisRepository` |
 | Build | **Maven** (shade plugin → `target/discord-bot-1.0.0.jar`) |
 | Tests | **JUnit 5** |
-| Server | **Amazon Linux** + **systemd** (`bot.service`), bootstrap via `scripts/userdata.sh` |
+| Server | **Amazon Linux** + **systemd** (`bot.service`) + **Docker Compose**, bootstrap via `scripts/userdata.sh` |
 | CI | **GitHub Actions** — `.github/workflows/run_tests.yml` |
 | Static analysis | **Checkstyle** — runs during `mvn verify` using `config/checkstyle/checkstyle.xml` |
 
@@ -39,94 +37,62 @@ CI runs **`mvn -B verify`** (compile, tests, package, and **Checkstyle**). Deplo
 
 ---
 
-## Run (development machine)
-
-**You need:** Git, **Java 17**, **Maven 3.9+**, AWS credentials that can call `secretsmanager:GetSecretValue` for your secret, and a Discord application with **Message Content Intent** enabled.
-
-Configuration comes from **AWS Secrets Manager** and the **default AWS credential chain** (for example `~/.aws/credentials` in a Learner Lab session). The bot uses built-in defaults **`us-east-1`** for the region and **`220_Discord_Token`** for the secret id unless the **host** sets `AWS_REGION` / `AWS_SECRET_NAME` (for example **`Environment=`** lines in **`bot.service`** on EC2). Do not use a `.env` file or local exports for Discord or channel settings.
-
-### Local Redis (for XP + leaderboards)
-
-If you want XP/leaderboards to persist locally, you need Redis running on **`localhost:6379`**.
-
-On macOS (Homebrew):
-
-```bash
-brew services start redis
-redis-cli ping
-```
-
-Useful scripts (all under `scripts/`):
-
-- **Reset local Redis DB**: `./scripts/reset_redis.sh`
-- **Seed “new bot” data**: `./scripts/seed_new_bot_redis.sh`
-- **Seed “mid-life bot” data**: `./scripts/seed_mid_life_bot_redis.sh`
-
-### 1. Clone
-
-```bash
-git clone https://github.com/cs220s26/britan-jackson-alex-project-repo.git
-cd britan-jackson-alex-project-repo
-```
-
-### 2. Store the Discord token in Secrets Manager
-
-Create a secret named **`220_Discord_Token`** (or another name—if you change it, set `AWS_SECRET_NAME` on the host that runs the bot).
-
-The **secret value** in AWS can be stored in either of two shapes. The bot decides which shape you used by looking at the **first non-whitespace character** of the string: if it is **`{`**, the value is treated as **JSON**; otherwise the **entire string** is treated as the Discord token.
-
-**Plain string (“token alone”)**
-
-- Paste **only** the bot token text you copied from the [Discord Developer Portal](https://discord.com/developers/applications) (Bot section → **Token**).  
-- No JSON, no quotes, no curly braces, no key names—just one line of characters, for example:  
-  `MTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxx`  
-- The whole secret body is used as `discordToken`. There is **no** channel name in this format, so the bot listens everywhere your handler allows (not locked to one channel by config).
-
-Use this when you only need the token in Secrets Manager and you are fine configuring an optional channel name later by switching to JSON or by changing the secret.
-
-**JSON object**
-
-- Use JSON when you want **both** the token **and** optional metadata in one secret.  
-- Include a token field using one of: **`DISCORD_TOKEN`**, **`discord_token`**, or **`token`**.  
-- Optionally add a Discord text channel **name** (not the numeric ID) with **`DISCORD_CHANNEL_NAME`** or **`CHANNEL_NAME`** so **`ChannelScope`** can restrict commands to that channel.  
-- If those channel keys are missing or empty, behavior matches “token alone” for channel binding: the bot is **not** tied to a single channel by name from the secret.
-
-### 3. AWS CLI profile (e.g. Learner Lab)
-
-Put temporary credentials in `~/.aws/credentials` under `[default]` so **DefaultCredentialsProvider** can resolve them.
-
-### 4. Build and run
-
-```bash
-mvn -q package
-java -jar target/discord-bot-1.0.0.jar
-```
-
-Ensure the secret exists in the **same region** as the default (`us-east-1`) or set `AWS_REGION` on the machine that runs the JVM (for example in **`bot.service`** on EC2).
-
----
-
 ## First-time production setup (EC2)
 
-Rough path; the secret must live in the same AWS region as **`AWS_REGION`** in **`bot.service`** (default **`us-east-1`**).
+Straight-to-the-point (in **vockey / Learner Lab AWS console**):
 
-1. **Instance:** Amazon Linux 2023 (or compatible), security group allowing **SSH (22)** from your IP; attach an **IAM instance profile** that can read the secret (e.g. Learner Lab **`LabInstanceProfile`** / **`LabRole`** pattern).
-2. **User data:** paste **`scripts/userdata.sh`** from this repo into **Advanced details → User data**. It installs Git, **Corretto 17**, Maven, clones into **`/opt/discord-bot`**, runs **`mvn package`**, installs **`bot.service`**, and enables the service. (You still need Redis available separately if you want persistence on the server.)
-3. **Edit `bot.service`** if your secret is in another region or uses another secret id—the **`Environment=`** lines set **`AWS_REGION`** and **`AWS_SECRET_NAME`** for the process (no `.env` on the instance).
-4. **Verify:**
+- **1. Create the token secret**
+  - In **AWS Secrets Manager** (region **`us-east-1`**), create **`220_Discord_Token`**
+  - Secret value = your Discord bot token
+- **2. Download your SSH key**
+  - Download/save your Learner Lab key file (for example **`labuser.pem`**)
+- **3. Launch EC2**
+  - AMI: Amazon Linux 2023
+  - Security group: allow **SSH (22)** from your IP
+  - IAM: attach an **instance profile** that can read the secret
+- **4. Paste user data**
+  - Paste **`scripts/userdata.sh`** into EC2 User data (installs Docker/Compose and enables `bot.service`)
+- **5. Verify**
 
 ```bash
 sudo systemctl status bot.service
 sudo journalctl -u bot.service -f --no-pager
 ```
 
-The JAR path is **`/opt/discord-bot/target/discord-bot-1.0.0.jar`** as referenced in the unit file.
-
 ### Redeploying after changes
 
-On the server, use the included script (or equivalent): it pulls `main` and restarts the unit—see **`scripts/redeploy.sh`**.
+On the server:
+
+```bash
+sudo /opt/discord-bot/scripts/redeploy.sh
+```
 
 ---
+
+## Run (development machine)
+
+Straight-to-the-point:
+
+1. **Clone:**
+
+```bash
+git clone https://github.com/cs220s26/britan-jackson-alex-project-repo.git
+cd britan-jackson-alex-project-repo
+```
+
+2. **AWS creds (so the bot can read Secrets Manager):** make sure `~/.aws/credentials` has a valid `[default]`.
+3. **Secrets Manager:** create **`220_Discord_Token`** in **`us-east-1`** (value = your Discord bot token).
+4. **Run bot + Redis:**
+
+```bash
+docker compose --profile bot up --build
+```
+
+To stop:
+
+```bash
+docker compose down
+```
 
 ## Continuous integration (GitHub Actions)
 

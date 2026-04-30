@@ -1,0 +1,31 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  bot:
+    profiles: ["bot"]
+    build:
+      context: .
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_SECRET_NAME: ${AWS_SECRET_NAME:-220_Discord_Token}
+    volumes:
+      - ~/.aws:/home/app/.aws:ro
+
+volumes:
+  redis-data:

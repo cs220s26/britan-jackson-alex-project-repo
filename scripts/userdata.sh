@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# EC2 user-data for "Docker + systemd" deployment (Amazon Linux 2023).
+# - installs Docker + Compose plugin
+# - clones the repo into /opt/discord-bot
+# - installs and enables bot.service (which runs Compose in the foreground)
+#
+# The bot reads its Discord token from AWS Secrets Manager.
+# Best practice is to attach an IAM instance profile that can read the secret.
+
 REPO_URL="https://github.com/cs220s26/britan-jackson-alex-project-repo.git"
 APP_DIR="/opt/discord-bot"
 
-yum install -y git java-17-amazon-corretto-devel maven
+yum -y update
+yum -y install git docker docker-compose-plugin
+
+systemctl enable --now docker
 
 if [[ ! -d "$APP_DIR/.git" ]]; then
   rm -rf "$APP_DIR"
@@ -12,7 +23,6 @@ if [[ ! -d "$APP_DIR/.git" ]]; then
 fi
 
 cd "$APP_DIR"
-/usr/bin/mvn -q package
 
 cp "$APP_DIR/bot.service" /etc/systemd/system/bot.service
 systemctl daemon-reload

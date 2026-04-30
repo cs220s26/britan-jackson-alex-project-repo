@@ -13,6 +13,10 @@ public class RedisManager implements RedisRepository {
     private static final String K_GROUP = "group:";
     private static final String K_SESSION = "session:";
     private static final String K_ACTIVE = "activeSession:";
+    private static final String ENV_REDIS_HOST = "REDIS_HOST";
+    private static final String ENV_REDIS_PORT = "REDIS_PORT";
+    private static final String DEFAULT_REDIS_HOST = "localhost";
+    private static final int DEFAULT_REDIS_PORT = 6379;
 
     private final ObjectMapper mapper;
     private Jedis jedis;
@@ -23,11 +27,38 @@ public class RedisManager implements RedisRepository {
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         try {
-            jedis = new Jedis("localhost", 6379);
+            String host = envOrDefault(ENV_REDIS_HOST, DEFAULT_REDIS_HOST);
+            int port = envIntOrDefault(ENV_REDIS_PORT, DEFAULT_REDIS_PORT);
+            jedis = new Jedis(host, port);
             System.out.println("Redis connection successful: " + jedis.ping());
         } catch (JedisConnectionException e) {
             System.out.println("Could not successfully connect to Redis Server");
             jedis = null;
+        }
+    }
+
+    private static String envOrDefault(String key, String def) {
+        String v = System.getenv(key);
+        if (v == null) {
+            return def;
+        }
+        v = v.trim();
+        return v.isEmpty() ? def : v;
+    }
+
+    private static int envIntOrDefault(String key, int def) {
+        String v = System.getenv(key);
+        if (v == null) {
+            return def;
+        }
+        v = v.trim();
+        if (v.isEmpty()) {
+            return def;
+        }
+        try {
+            return Integer.parseInt(v);
+        } catch (NumberFormatException e) {
+            return def;
         }
     }
 
