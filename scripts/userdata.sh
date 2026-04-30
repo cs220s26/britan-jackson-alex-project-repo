@@ -28,9 +28,19 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y git ca-certificates curl
 
-# Docker Engine + Compose plugin from Ubuntu repos (simple + reliable in labs)
-apt-get install -y docker.io docker-compose-plugin
+# Docker Engine from Ubuntu repos
+apt-get install -y docker.io
 systemctl enable --now docker
+
+# Install Docker Compose (as a Docker CLI plugin). Some Ubuntu images in vockey
+# don't provide docker-compose-plugin in apt.
+mkdir -p /usr/local/lib/docker/cli-plugins
+if ! docker compose version >/dev/null 2>&1; then
+  arch="$(uname -m)"
+  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${arch}" \
+    -o /usr/local/lib/docker/cli-plugins/docker-compose
+  chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+fi
 
 if [[ ! -d "$APP_DIR/.git" ]]; then
   rm -rf "$APP_DIR"
