@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# EC2 user-data for "Docker + systemd" deployment (Amazon Linux 2023).
-# - installs Docker + Compose plugin
+# EC2 user-data for "containers + systemd" deployment (Amazon Linux 2023).
+# Uses Podman because Docker packages may be unavailable in vockey/Learner Lab repos.
+# - installs Podman + podman-compose
 # - clones the repo into /opt/discord-bot
 # - installs and enables bot.service (which runs Compose in the foreground)
 #
@@ -14,7 +15,7 @@ APP_DIR="/opt/discord-bot"
 
 # Amazon Linux 2023 uses dnf (yum is a compatibility wrapper).
 dnf -y update
-dnf -y install git curl podman python3-pip
+dnf -y install git podman python3-pip
 
 # Podman Compose (pip) so we can run docker-compose.yml under systemd
 python3 -m pip install --upgrade pip
