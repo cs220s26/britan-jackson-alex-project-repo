@@ -1,31 +1,26 @@
 name: Java Maven CI (tests + checkstyle)
 
-# Trigger the workflow on pushes or pull requests to the main branch
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   test:
+    name: Run tests + checkstyle
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Check out the repository code
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    # 2. Set up the Java Development Kit (JDK)
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin' # Eclipse Temurin is a popular, open-source JDK distribution
-        cache: 'maven'          # Automatically caches your ~/.m2/repository to speed up subsequent runs
+      - name: Set up JDK 17 (Temurin) + Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
 
-    # 3. Run the Maven build and tests
-    - name: Run Maven verify (includes Checkstyle)
-      # -B runs Maven in non-interactive (batch) mode, preventing log spam
-      # verify compiles, tests, and packages the code, ensuring integration tests run if present
-      run: mvn -B verify
+      - name: Maven verify (tests + checkstyle)
+        run: mvn -B verify
