@@ -13,8 +13,6 @@
 - **XP/leaderboards**: `!xp`, `!xp rank <group>`, `!leaderboard <group>`
 - **Basic**: `!ping`, `!about`, `!help`
 
-Optional: put `CHANNEL_NAME` in the secret JSON to restrict commands to one channel (`ChannelScope`).
-
 ---
 
 ## Stack
@@ -37,20 +35,31 @@ CI runs **`mvn -B verify`** (compile, tests, package, and **Checkstyle**). Deplo
 
 ## First-time production setup (EC2)
 
-Straight-to-the-point (in **vockey / Learner Lab AWS console**):
+1. **Create the token secret**
+   - In **AWS Secrets Manager** (region **`us-east-1`**), create **`220_Discord_Token`**
+   - Secret value (Secret string) should be JSON like:
 
-- **1. Create the token secret**
-  - In **AWS Secrets Manager** (region **`us-east-1`**), create **`220_Discord_Token`**
-  - Secret value = your Discord bot token
-- **2. Download your SSH key**
-  - Download/save your Learner Lab key file (for example **`labuser.pem`**)
-- **3. Launch EC2**
-  - AMI: **Ubuntu**
-  - Security group: allow **SSH (22)** from your IP
-  - IAM: attach an **instance profile** that can read the secret
-- **4. Paste user data**
-  - Paste **`scripts/userdata.sh`** into EC2 User data (installs Docker/Compose and enables `bot.service`)
-- **5. Verify**
+```json
+{"DISCORD_TOKEN":"YOUR_DISCORD_BOT_TOKEN","CHANNEL_NAME":"<lastName>-bot"}
+```
+
+   - `CHANNEL_NAME` is optional:
+     - If set, the bot will only respond in that channel name.
+     - If omitted, the bot will respond in any channel it can see.
+
+2. **Download your SSH key**
+   - Download/save your Learner Lab key file (for example **`labuser.pem`**)
+
+3. **Launch EC2**
+   - AMI: **Ubuntu**
+   - Security group: allow **SSH (22)** from your IP
+   - Key pair (login): select the key pair named **`vockey`**
+   - IAM: attach an **instance profile** that can read the secret
+
+4. **Paste user data**
+   - Paste **`scripts/userdata.sh`** into EC2 User data (installs Docker/Compose and enables `bot.service`)
+
+5. **Verify**
 
 ```bash
 sudo systemctl status bot.service
@@ -69,8 +78,6 @@ sudo /opt/discord-bot/scripts/redeploy.sh
 
 ## Run (development machine)
 
-Straight-to-the-point:
-
 1. **Clone:**
 
 ```bash
@@ -78,15 +85,44 @@ git clone https://github.com/cs220s26/britan-jackson-alex-project-repo.git
 cd britan-jackson-alex-project-repo
 ```
 
-2. **AWS creds (so the bot can read Secrets Manager):** make sure `~/.aws/credentials` has a valid `[default]`.
-3. **Secrets Manager:** create **`220_Discord_Token`** in **`us-east-1`** (value = your Discord bot token).
+2. **AWS CLI + creds (so the bot can read Secrets Manager):**
+   - Install AWS CLI and confirm it works:
+
+```bash
+aws --version
+```
+
+   - Copy and paste the following into `~/.aws/credentials` (replace values):
+
+```ini
+[default]
+aws_access_key_id=YOUR_ACCESS_KEY_ID
+aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+aws_session_token=YOUR_SESSION_TOKEN
+```
+
+   - (Recommended) Set your default region in `~/.aws/config`:
+
+```ini
+[default]
+region=us-east-1
+```
+
+3. **Secrets Manager:** create **`220_Discord_Token`** in **`us-east-1`** with a JSON secret string like:
+
+```json
+{"DISCORD_TOKEN":"YOUR_DISCORD_BOT_TOKEN","CHANNEL_NAME":"<lastName>-bot"}
+```
+
+   `CHANNEL_NAME` is optional:
+   - If set, the bot will only respond in that channel name.
+   - If omitted, the bot will respond in any channel it can see.
+
 4. **Run bot + Redis:**
 
 ```bash
 docker compose --profile bot up --build
 ```
-
-Notes:
 
 - **Local creds into container**: `docker-compose.yml` mounts `${HOME}/.aws` read-only so the bot can read Secrets Manager.
 
@@ -124,8 +160,8 @@ No AWS secrets are required for CI—it only builds and tests in GitHub’s runn
 
 ## References (helpful while building)
 
-- [JDA wiki](https://github.com/DV8FromTheWorld/JDA/wiki) — intents and gateway setup  
-- [Discord Developer Portal](https://discord.com/developers/applications) — bot token and privileged intents  
-- [AWS Secrets Manager + Java SDK v2](https://docs.aws.amazon.com/secretsmanager/latest/userguide/secrets-manager-client.html)  
-- [systemd unit files](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)  
+- [JDA wiki](https://github.com/DV8FromTheWorld/JDA/wiki) — intents and gateway setup
+- [Discord Developer Portal](https://discord.com/developers/applications) — bot token and privileged intents
+- [AWS Secrets Manager + Java SDK v2](https://docs.aws.amazon.com/secretsmanager/latest/userguide/secrets-manager-client.html)
+- [systemd unit files](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)
 - [GitHub Actions — workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
