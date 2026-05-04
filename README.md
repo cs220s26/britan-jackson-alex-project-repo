@@ -121,7 +121,7 @@ region=us-east-1
 4. **Run bot + Redis:**
 
 ```bash
-docker compose --profile bot up --build
+docker compose up --build
 ```
 
 - **Local creds into container**: `docker-compose.yml` mounts `${HOME}/.aws` read-only so the bot can read Secrets Manager.
@@ -144,6 +144,21 @@ Workflow: **`.github/workflows/run_tests.yml`**
 No AWS secrets are required for CI—it only builds and tests in GitHub’s runner. Because Checkstyle is wired into Maven’s `verify` phase, CI enforces it automatically.
 
 **Runs:** [GitHub Actions tab](https://github.com/cs220s26/britan-jackson-alex-project-repo/actions/workflows/run_tests.yml)
+
+### EC2 redeploy / Redis scripts (manual)
+
+Workflow: **`.github/workflows/ec2_ssh_ops.yml`** — GitHub → Actions → **Run workflow**.
+
+Uses SSH from Actions into your instance (requires secrets). Runs one of: `redeploy.sh`, `reset_redis.sh`, `seed_new_bot_redis.sh`, or `seed_mid_life_bot_redis.sh`.
+
+Repo secrets:
+
+| Secret | Purpose |
+|--------|---------|
+| `EC2_HOST` | Instance public IPv4 or DNS |
+| `EC2_SSH_KEY` | Private key (full `.pem` contents, including BEGIN/END lines) |
+| `EC2_USER` | Optional SSH user (defaults to `ubuntu`) |
+| `EC2_SSH_PORT` | Optional SSH port (defaults to `22`) |
 
 ---
 

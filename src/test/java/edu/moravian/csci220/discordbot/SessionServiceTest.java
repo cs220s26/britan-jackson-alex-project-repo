@@ -11,20 +11,19 @@ public class SessionServiceTest {
 
     @Test
     void testStartSession() throws JsonProcessingException {
-        FakeRedisRepository repo = new FakeRedisRepository();
+        InMemoryRedisRepository repo = new InMemoryRedisRepository();
         SessionService service = new SessionService(repo);
 
         StudySession s = service.startSession("u1", "math");
 
         assertNotNull(s);
         assertEquals("math", s.getSubject());
-        assertEquals(s.getSessionId(), repo.getActiveSession("u1")); // now passes
-
-}
+        assertEquals(s.getSessionId(), repo.getActiveSession("u1"));
+    }
 
     @Test
-    void testEndSessionAwardsXP() throws JsonProcessingException, InterruptedException {
-        FakeRedisRepository repo = new FakeRedisRepository();
+    void testEndSessionAwardsXP() throws JsonProcessingException {
+        InMemoryRedisRepository repo = new InMemoryRedisRepository();
         SessionService service = new SessionService(repo);
 
         // Create user + group

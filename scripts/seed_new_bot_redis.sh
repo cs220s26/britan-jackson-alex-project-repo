@@ -31,7 +31,7 @@ fi
 echo "Seeding NEW BOT dataset into Redis at ${HOST}:${PORT} db=${DB} ..."
 
 # Keep dataset small: a couple of users, one group, no leaderboard activity yet.
-# Matches RedisManager/FakeRedisRepository key prefixes:
+# Matches RedisManager key prefixes:
 # - user:<id>
 # - group:<name>
 # - session:<sessionId>

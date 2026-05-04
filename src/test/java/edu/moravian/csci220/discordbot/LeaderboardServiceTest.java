@@ -9,7 +9,7 @@ public class LeaderboardServiceTest {
 
     @Test
     void testLeaderboardSorted() throws JsonProcessingException {
-        FakeRedisRepository repo = new FakeRedisRepository();
+        InMemoryRedisRepository repo = new InMemoryRedisRepository();
 
         Group g = new Group("coding");
         g.addXP("u1", 10);

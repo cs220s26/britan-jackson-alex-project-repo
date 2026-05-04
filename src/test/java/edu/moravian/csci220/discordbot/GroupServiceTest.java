@@ -12,7 +12,7 @@ public class GroupServiceTest {
 
     @Test
     void testCreateGroup() throws JsonProcessingException {
-        FakeRedisRepository repo = new FakeRedisRepository();
+        InMemoryRedisRepository repo = new InMemoryRedisRepository();
         GroupService service = new GroupService(repo);
 
         Group g = service.createGroup("math");
@@ -25,7 +25,7 @@ public class GroupServiceTest {
 
     @Test
     void testJoinGroup() throws JsonProcessingException {
-        FakeRedisRepository repo = new FakeRedisRepository();
+        InMemoryRedisRepository repo = new InMemoryRedisRepository();
         GroupService service = new GroupService(repo);
 
         service.joinGroup("science", "userA", "alex");
